@@ -37,11 +37,15 @@ class PassiveUpdate(object):
                 'address_table': sections[6]
                 }
 
-        intro_stats = [ int(w) for w in sections['intro'][0].split() ]
-        self.creation_time = intro_stats[0]
-        self.pcap_received = intro_stats[1]
-        self.pcap_dropped = intro_stats[2]
-        self.iface_dropped = intro_stats[3]
+        intro_ids = sections['intro'][0].split()
+        self.bismark_id = intro_ids[0]
+        self.creation_time = int(intro_ids[1])
+        self.sequence_number = int(intro_ids[2])
+        if len(sections['intro']) >= 2:
+            intro_stats = [ int(w) for w in sections['intro'][1].split() ]
+            self.pcap_received = intro_stats[0]
+            self.pcap_dropped = intro_stats[1]
+            self.iface_dropped = intro_stats[2]
 
         if sections['anonymization'][0] == 'UNANONYMIZED':
             self.anonymized = False
@@ -104,10 +108,10 @@ class PassiveUpdate(object):
         address_stats = [ int(w) for w in sections['address_table'][0].split() ]
         self.address_table_first_id = address_stats[0]
         self.address_table_size = address_stats[1]
-        self.address_table = []
+        self.addresses = []
         for line in sections['address_table'][1:]:
             mac, ip = line.split()
             self.addresses.append(AddressEntry(
                 mac_address = mac,
-                ip_address = ip
+                ip_address = ip,
                 ))
