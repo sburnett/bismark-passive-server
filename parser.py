@@ -22,8 +22,7 @@ def parse_sections(lines):
     return sections
 
 class PassiveUpdate(object):
-    def __init__(self, filename):
-        contents = open(filename, 'r').read()
+    def __init__(self, contents):
         lines = contents.splitlines()
         sections = parse_sections(lines)
 
