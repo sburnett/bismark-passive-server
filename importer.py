@@ -92,9 +92,15 @@ class PassiveUpdateImporter(object):
             update.pcap_received = parsed_update.pcap_received
             update.pcap_dropped = parsed_update.pcap_dropped
             update.iface_dropped = parsed_update.iface_dropped
-            self._session.merge(update)
         except:
             pass
+        update.packet_series_dropped = parsed_update.packet_series_dropped
+        update.flow_table_size = parsed_update.flow_table_size
+        update.flow_table_expired = parsed_update.flow_table_expired
+        update.flow_table_dropped = parsed_update.flow_table_dropped
+        update.dropped_a_records = parsed_update.dropped_a_records
+        update.dropped_cname_records = parsed_update.dropped_cname_records
+        self._session.merge(update)
 
         for idx, entry in enumerate(parsed_update.addresses):
             mac_address = self._insert_mac_address(anonymization_context,

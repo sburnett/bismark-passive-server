@@ -49,6 +49,12 @@ class Update(Base):
     pcap_received = Column(Integer)
     pcap_dropped = Column(Integer)
     iface_dropped = Column(Integer)
+    packet_series_dropped = Column(Integer)
+    flow_table_size = Column(Integer)
+    flow_table_expired = Column(Integer)
+    flow_table_dropped = Column(Integer)
+    dropped_a_records = Column(Integer)
+    dropped_cname_records = Column(Integer)
 
     session = relationship(Session, backref='updates')
 
@@ -193,10 +199,10 @@ class Packet(Base):
 
     flow = relationship(Flow, backref='packets')
 
-def initialize_database():
-    engine = create_engine('sqlite:///test.sqlite')
+def initialize_database(uri):
+    engine = create_engine(uri)
     Base.metadata.create_all(engine)
     return sessionmaker(bind=engine)
 
-def init_session():
-    return initialize_database()()
+def init_session(uri):
+    return initialize_database(uri)()
