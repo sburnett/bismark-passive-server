@@ -193,10 +193,12 @@ class Flow(Base):
 class Packet(Base):
     __tablename__ = 'packets'
     id = Column(Integer, primary_key=True)
+    update_id = Column(Integer, ForeignKey('updates.id'), nullable=False)
     timestamp = Column(DateTime, nullable=False)
     size = Column(Integer, nullable=False)
     flow_id = Column(Integer, ForeignKey('flows.id'), nullable=False)
 
+    update = relationship(Update, backref='packets')
     flow = relationship(Flow, backref='packets')
 
 def initialize_database(uri):

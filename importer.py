@@ -152,7 +152,8 @@ class PassiveUpdateImporter(object):
         for entry in parsed_update.packet_series:
             flow = flows.get(entry.flow_id)
             timestamp = datetime.utcfromtimestamp(entry.timestamp / 1e6)
-            packet = schema.Packet(timestamp=timestamp,
+            packet = schema.Packet(update=update,
+                                   timestamp=timestamp,
                                    size=entry.size,
                                    flow=flow)
             self._session.add(packet)
