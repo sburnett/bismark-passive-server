@@ -1,4 +1,6 @@
 from datetime import datetime
+from sqlalchemy import func
+from sqlalchemy.sql import and_
 from sqlalchemy.sql.expression import desc
 
 import schema
@@ -55,20 +57,39 @@ class PassiveUpdateImporter(object):
                                   cname=cname)
 
     def _lookup_local_addresses_for_session(self, session):
+        max_sequence_numbers = self._session.query(
+                schema.LocalAddress.remote_id,
+                func.max(schema.Update.sequence_number).label('max_seqnum')).\
+                join(schema.Update).\
+                group_by(schema.LocalAddress.remote_id).\
+                subquery()
         local_addresses = self._session.\
-                query(schema.LocalAddress).join(schema.Update).\
-                filter(schema.Update.session == session).\
-                order_by(desc(schema.Update.sequence_number)).\
-                distinct(schema.LocalAddress.remote_id)
+                query(schema.LocalAddress).\
+                join(schema.Update,
+                     (max_sequence_numbers,
+                      and_(schema.Update.sequence_number
+                                == max_sequence_numbers.c.max_seqnum,
+                           schema.LocalAddress.remote_id
+                                == max_sequence_numbers.c.remote_id))).\
+                all()
         return dict(map(lambda la: (la.remote_id, la), local_addresses))
 
     def _lookup_flows_for_session(self, session):
+        max_sequence_numbers = self._session.query(
+                schema.Flow.remote_id,
+                func.max(schema.Update.sequence_number).label('max_seqnum')).\
+                join(schema.Update).\
+                group_by(schema.Flow.remote_id).\
+                subquery()
         flows = self._session.\
                 query(schema.Flow).\
-                join(schema.Update).\
-                filter(schema.Update.session == session).\
-                order_by(desc(schema.Update.sequence_number)).\
-                distinct(schema.Flow.remote_id)
+                join(schema.Update,
+                     (max_sequence_numbers,
+                      and_(schema.Update.sequence_number
+                                == max_sequence_numbers.c.max_seqnum,
+                           schema.Flow.remote_id
+                                == max_sequence_numbers.c.remote_id))).\
+                all()
         return dict(map(lambda f: (f.remote_id, f), flows))
 
     def import_update(self, parsed_update):

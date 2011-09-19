@@ -78,8 +78,8 @@ class SecondUpdate(PacketUpdate):
         self.sequence_number = 22
         self.pcap_received = 104
         self.packet_series = [parser.PacketEntry(timestamp=901, size=902, flow_id=38),
-                              parser.PacketEntry(timestamp=910, size=911, flow_id=920)]
-        self.flow_table = [parser.FlowEntry(flow_id=920, source_ip='abc123', destination_ip='987bcd', transport_protocol=921, source_port=922, destination_port=923)]
+                              parser.PacketEntry(timestamp=910, size=911, flow_id=39)]
+        self.flow_table = [parser.FlowEntry(flow_id=39, source_ip='abc123', destination_ip='987bcd', transport_protocol=921, source_port=922, destination_port=923)]
         self.a_records = [parser.DnsAEntry(address_id=0, domain='blarg.org', ip_address='bcd987')]
         self.cname_records = [parser.DnsCnameEntry(address_id=1, domain='bar.us', cname='bar.com')]
         self.address_table_first_id = 1
