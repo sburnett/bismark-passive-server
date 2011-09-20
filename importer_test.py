@@ -86,6 +86,20 @@ class SecondUpdate(PacketUpdate):
         self.address_table_size = 52
         self.addresses = [parser.AddressEntry(mac_address='9123BEAD', ip_address='9876543ab')]
 
+class AddressAliasUpdate(PacketUpdate):
+    def __init__(self):
+        super(AddressAliasUpdate, self).__init__()
+        self.bismark_id = 'BISMARKID'
+        self.creation_time = 123
+        self.sequence_number = 23
+        self.pcap_received = 104
+        self.packet_series = []
+        self.flow_table = []
+        self.a_records = [parser.DnsAEntry(address_id=0, domain='blarg.org', ip_address='bcd987')]
+        self.cname_records = [parser.DnsCnameEntry(address_id=0, domain='bar.us', cname='bar.com')]
+        self.address_table_first_id = 0
+        self.address_table_size = 52
+        self.addresses = [parser.AddressEntry(mac_address='9876DAEB', ip_address='9876ba')]
 
 class PassiveUpdateImporterTests(unittest.TestCase):
     def setUp(self):
@@ -223,6 +237,35 @@ class PassiveUpdateImporterTests(unittest.TestCase):
         my_other_flow = self.session.query(schema.Flow).filter_by(remote_id=first_update.flow_table[0].flow_id).one()
         self.assertTrue(self.session.query(schema.Packet).filter_by(flow=my_other_flow, update=my_second_update).one())
         self.assertTrue(self.session.query(schema.Packet).filter_by(flow=my_flow_record, update=my_second_update).one())
+
+    def test_address_aliasing(self):
+        first_update = PacketUpdate()
+        second_update = SecondUpdate()
+        third_update = AddressAliasUpdate()
+        self.importer.import_update(first_update)
+        self.importer.import_update(second_update)
+        self.importer.import_update(third_update)
+
+        self.assertTrue(self.session.query(schema.Node).one())
+        self.assertTrue(self.session.query(schema.AnonymizationContext).one())
+        self.assertTrue(self.session.query(schema.Session).one())
+
+        my_first_update = self.session.query(schema.Update).filter_by(sequence_number=first_update.sequence_number).one()
+        my_second_update = self.session.query(schema.Update).filter_by(sequence_number=second_update.sequence_number).one()
+        my_third_update = self.session.query(schema.Update).filter_by(sequence_number=third_update.sequence_number).one()
+        self.assertTrue(my_first_update != my_second_update)
+        self.assertTrue(my_second_update != my_third_update)
+
+        my_address = self.session.query(schema.LocalAddress).filter_by(update=my_third_update).one()
+        self.assertTrue(my_address.ip_address.data == third_update.addresses[0].ip_address)
+
+        my_a_record = self.session.query(schema.DnsARecord).filter_by(update=my_third_update).one()
+        self.assertTrue(my_a_record.local_address.ip_address.data == third_update.addresses[0].ip_address)
+        self.assertTrue(my_a_record.local_address.mac_address.data == third_update.addresses[0].mac_address)
+
+        my_cname_record = self.session.query(schema.DnsCnameRecord).filter_by(update=my_third_update).one()
+        self.assertTrue(my_cname_record.local_address.ip_address.data == third_update.addresses[0].ip_address)
+        self.assertTrue(my_cname_record.local_address.mac_address.data == third_update.addresses[0].mac_address)
 
 if __name__ == '__main__':
     unittest.main()
