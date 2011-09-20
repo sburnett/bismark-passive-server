@@ -10,7 +10,7 @@ class Node(Base):
     """Represents a router in a home."""
     __tablename__ = 'nodes'
     id = Column(Integer, primary_key=True)
-    name = Column(String(50), unique=True, nullable=False)
+    name = Column(String(40), unique=True, nullable=False)
 
 class AnonymizationContext(Base):
     """Represents an anonymization key on a router; for each router there may be
@@ -66,7 +66,7 @@ class MacAddress(Base):
     anonymization_context_id = Column(Integer,
                                       ForeignKey('anonymization_contexts.id'),
                                       nullable=False)
-    data = Column(BigInteger, nullable=False)
+    data = Column(String(20), nullable=False)
 
     anonymization_context = relationship(AnonymizationContext,
                                          backref='mac_addresses')
@@ -79,7 +79,7 @@ class IpAddress(Base):
     anonymization_context_id = Column(Integer,
                                       ForeignKey('anonymization_contexts.id'),
                                       nullable=False)
-    data = Column(Integer, nullable=False)
+    data = Column(String(20), nullable=False)
 
     anonymization_context = relationship(AnonymizationContext,
                                          backref='ip_addresses')
