@@ -2,11 +2,14 @@ from collections import namedtuple
 
 PacketEntry = namedtuple('PacketSeries', ['timestamp', 'size', 'flow_id'])
 FlowEntry = namedtuple('FlowTable',
-                       ['flow_id', 'source_ip',
-                           'destination_ip', 'transport_protocol',
+                       ['flow_id', 'source_ip_anonymized', 'source_ip',
+                           'destination_ip_anonymized', 'destination_ip',
+                           'transport_protocol',
                            'source_port', 'destination_port'])
-DnsAEntry = namedtuple('DnsTableA', ['address_id', 'domain', 'ip_address'])
-DnsCnameEntry = namedtuple('DnsCnameTable', ['address_id', 'domain', 'cname'])
+DnsAEntry = namedtuple('DnsTableA',
+                       ['address_id', 'anonymized', 'domain', 'ip_address'])
+DnsCnameEntry = namedtuple('DnsCnameTable',
+                           ['address_id', 'anonymized', 'domain', 'cname'])
 AddressEntry = namedtuple('AddressTable', ['mac_address', 'ip_address'])
 
 def parse_sections(lines):
@@ -72,11 +75,15 @@ class PassiveUpdate(object):
         self.flow_table_dropped = flow_stats[3]
         self.flow_table = []
         for line in sections['flow_table'][1:]:
-            (flow_id, source_ip, destination_ip, transport_protocol,
+            (flow_id, source_ip_anonymized, source_ip,
+                    destination_ip_anonymized, destination_ip,
+                    transport_protocol,
                     source_port, destination_port) = line.split()
             self.flow_table.append(FlowEntry(
                 flow_id = int(flow_id),
+                source_ip_anonymized = int(source_ip_anonymized),
                 source_ip = source_ip,
+                destination_ip_anonymized = int(destination_ip_anonymized),
                 destination_ip = destination_ip,
                 transport_protocol = int(transport_protocol),
                 source_port = int(source_port),
@@ -88,18 +95,20 @@ class PassiveUpdate(object):
         self.dropped_cname_records = dns_stats[1]
         self.a_records = []
         for line in sections['dns_table_a'][1:]:
-            address_id, domain, address = line.split()
+            address_id, anonymized, domain, address = line.split()
             self.a_records.append(DnsAEntry(
                 address_id = int(address_id),
+                anonymized = int(anonymized),
                 domain = domain,
                 ip_address = address
                 ))
 
         self.cname_records = []
         for line in sections['dns_table_cname']:
-            address_id, domain, cname = line.split()
+            address_id, anonymized, domain, cname = line.split()
             self.cname_records.append(DnsCnameEntry(
                 address_id = int(address_id),
+                anonymized = int(anonymized),
                 domain = domain,
                 cname = cname
                 ))

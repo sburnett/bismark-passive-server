@@ -102,8 +102,8 @@ class TestParser(unittest.TestCase):
                     0 0
 
                     100 500 12 34
-                    29 987 456 23 45 56
-                    32 1004 433 30 26 31
+                    29 0 987 0 456 23 45 56
+                    32 0 1004 0 433 30 26 31
 
                     0 0
 
@@ -116,7 +116,9 @@ class TestParser(unittest.TestCase):
         self.assertTrue(update.flow_table_dropped == 34)
         self.assertTrue(len(update.flow_table) == 2)
         self.assertTrue(update.flow_table[0].flow_id == 29)
+        self.assertTrue(update.flow_table[0].source_ip_anonymized == 0)
         self.assertTrue(update.flow_table[0].source_ip == '987')
+        self.assertTrue(update.flow_table[0].destination_ip_anonymized == 0)
         self.assertTrue(update.flow_table[0].destination_ip == '456')
         self.assertTrue(update.flow_table[0].transport_protocol == 23)
         self.assertTrue(update.flow_table[0].source_port == 45)
@@ -138,11 +140,11 @@ class TestParser(unittest.TestCase):
                     0 0 0 0
 
                     5 6
-                    12 foo.com 123cd
-                    34 bar.org ae321
+                    12 0 foo.com 123cd
+                    34 1 bar.org ae321
 
-                    45 blah.cn blorg.us
-                    56 gorp.com boink.ca
+                    45 1 blah.cn blorg.us
+                    56 0 gorp.com boink.ca
 
                     0 0"""
         update = parser.PassiveUpdate(format_source(source))
@@ -150,16 +152,20 @@ class TestParser(unittest.TestCase):
         self.assertTrue(update.dropped_cname_records == 6)
         self.assertTrue(len(update.a_records) == 2)
         self.assertTrue(update.a_records[0].address_id == 12)
+        self.assertTrue(update.a_records[0].anonymized == 0)
         self.assertTrue(update.a_records[0].domain == 'foo.com')
         self.assertTrue(update.a_records[0].ip_address == '123cd')
         self.assertTrue(update.a_records[1].address_id == 34)
+        self.assertTrue(update.a_records[1].anonymized == 1)
         self.assertTrue(update.a_records[1].domain == 'bar.org')
         self.assertTrue(update.a_records[1].ip_address == 'ae321')
         self.assertTrue(len(update.cname_records) == 2)
         self.assertTrue(update.cname_records[0].address_id == 45)
+        self.assertTrue(update.cname_records[0].anonymized == 1)
         self.assertTrue(update.cname_records[0].domain == 'blah.cn')
         self.assertTrue(update.cname_records[0].cname == 'blorg.us')
         self.assertTrue(update.cname_records[1].address_id == 56)
+        self.assertTrue(update.cname_records[1].anonymized == 0)
         self.assertTrue(update.cname_records[1].domain == 'gorp.com')
         self.assertTrue(update.cname_records[1].cname == 'boink.ca')
 
