@@ -107,7 +107,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION merge_anonymization_context(v_node_id varchar, v_signature varchar)
+CREATE FUNCTION
+merge_anonymization_context(v_node_id varchar, v_signature varchar)
 RETURNS int AS $$
 DECLARE
      v_id int;
@@ -123,8 +124,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION merge_session(v_anonymization_context_id int,
-                              v_key varchar)
+CREATE FUNCTION
+merge_session(v_anonymization_context_id int, v_key varchar)
 RETURNS int AS $$
 DECLARE
      v_id int;
