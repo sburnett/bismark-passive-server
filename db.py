@@ -1,6 +1,8 @@
 import psycopg2
 
 class BismarkPassiveDatabase(object):
+    UNANONYMIZED_SIGNATURE = ''
+
     merge_node_text = 'SELECT merge_node (%s)'
     merge_anonymization_context_text = \
             'SELECT merge_anonymization_context (%s, %s)'
@@ -37,11 +39,15 @@ class BismarkPassiveDatabase(object):
         if parsed_update.anonymized:
             signature = parsed_update.anonymization_signature
         else:
-            signature = ''
+            signature = self.UNANONYMIZED_SIGNATURE
         anonymization_context_id = self._execute_command(
                 self.merge_anonymization_context_text,
                 node_id,
                 signature)
+        unanonymized_context_id = self._execute_command(
+                self.merge_anonymization_context_text,
+                node_id,
+                self.UNANONYMIZED_SIGNATURE)
         session_id = self._execute_command(
                 self.merge_session_text,
                 anonymization_context_id,
@@ -85,15 +91,19 @@ class BismarkPassiveDatabase(object):
                     ip_address_id)
 
         for entry in parsed_update.a_records:
+            if entry.anonymized:
+                context_id = anonymization_context_id
+            else:
+                context_id = unanonymized_context_id
             local_address_id = self._execute_command(
                     self.lookup_local_address_for_session,
                     session_id,
                     entry.address_id)
             domain_name_id = self._execute_command(self.merge_domain_name_text,
-                                                   anonymization_context_id,
+                                                   context_id,
                                                    entry.domain)
             ip_address_id = self._execute_command(self.merge_ip_address_text,
-                                                  anonymization_context_id,
+                                                  context_id,
                                                   entry.ip_address)
             self._execute_command(self.merge_dns_a_record_text,
                                   update_id,
@@ -102,15 +112,19 @@ class BismarkPassiveDatabase(object):
                                   ip_address_id)
 
         for entry in parsed_update.cname_records:
+            if entry.anonymized:
+                context_id = anonymization_context_id
+            else:
+                context_id = unanonymized_context_id
             local_address_id = self._execute_command(
                     self.lookup_local_address_for_session,
                     session_id,
                     entry.address_id)
             domain_name_id = self._execute_command(self.merge_domain_name_text,
-                                                   anonymization_context_id,
+                                                   context_id,
                                                    entry.domain)
             cname_id = self._execute_command(self.merge_domain_name_text,
-                                             anonymization_context_id,
+                                             context_id,
                                              entry.cname)
             self._execute_command(self.merge_dns_cname_record_text,
                                   update_id,
@@ -119,12 +133,20 @@ class BismarkPassiveDatabase(object):
                                   cname_id)
 
         for entry in parsed_update.flow_table:
+            if entry.source_ip_anonymized:
+                source_context_id = anonymization_context_id
+            else:
+                source_context_id = unanonymized_context_id
             source_ip_id = self._execute_command(self.merge_ip_address_text,
-                                                 anonymization_context_id,
+                                                 source_context_id,
                                                  entry.source_ip)
+            if entry.destination_ip_anonymized:
+                destination_context_id = anonymization_context_id
+            else:
+                destination_context_id = unanonymized_context_id
             destination_ip_id = self._execute_command(
                     self.merge_ip_address_text,
-                    anonymization_context_id,
+                    destination_context_id,
                     entry.destination_ip)
             self._execute_command(self.merge_flow_text,
                                   entry.flow_id,
