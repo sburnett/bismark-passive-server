@@ -10,20 +10,21 @@ import db
 import parser
 
 def parse_args():
-    usage = 'usage: %prog [options] db_user db_name updates_directory'
+    usage = 'usage: %prog [options] db_user db_name updates_directory archive_directory'
     parser = OptionParser(usage=usage)
-    parser.add_option('-d', '--updates-directory', dest='directory')
-    parser.add_option('-u', '--db-user', dest='db_user')
-    parser.add_option('-n', '--db-name', dest='db_name')
     options, args = parser.parse_args()
-    if len(args) != 3:
+    if len(args) != 4:
         parser.error('Missing required option')
-    return options, args
+    mandatory = { 'db_user': args[0],
+                  'db_name': args[1],
+                  'updates_directory': args[2],
+                  'archive_directory': args[3] }
+    return options, mandatory
 
 def main():
     (options, args) = parse_args()
-    database = db.BismarkPassiveDatabase(args[0], args[1])
-    filenames = sorted(glob.glob(os.path.join(args[2], '*.tar')))
+    database = db.BismarkPassiveDatabase(args['db_user'], args['db_name'])
+    filenames = sorted(glob.glob(os.path.join(args['updates_directory'], '*.tar')))
     for filename in filenames:
         tarball = tarfile.open(filename)
         extract_dir = tempfile.mkdtemp(prefix='bismark-passive-')
@@ -42,6 +43,7 @@ def main():
             database.import_update(update)
 
         shutil.rmtree(extract_dir)
+        shutil.move(filename, args['archive_directory'])
 
 if __name__ == '__main__':
     main()
