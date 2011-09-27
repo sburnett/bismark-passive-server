@@ -22,6 +22,7 @@ class BismarkPassiveDatabase(object):
             'SELECT lookup_local_address_for_session (%s, %s)'
     lookup_flow_for_session = 'SELECT lookup_flow_for_session (%s, %s)'
     check_out_of_order_text = 'SELECT count_out_of_order (%s, %s)'
+    compute_histograms_text = 'SELECT compute_histograms ()'
 
     def __init__(self, user, database):
         self._conn = psycopg2.connect(user=user, database=database)
@@ -172,3 +173,5 @@ class BismarkPassiveDatabase(object):
                                   entry.size)
         self._conn.commit()
 
+    def compute_histograms(self):
+        self._execute_command(self.compute_histograms_text)

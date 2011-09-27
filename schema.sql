@@ -98,6 +98,27 @@ CREATE TABLE packets (
     size integer NOT NULL
 );
 
+CREATE TABLE bandwidth_per_minute (
+    id SERIAL PRIMARY KEY,
+    node_id varchar REFERENCES nodes (name) NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
+    bytes_transferred integer NOT NULL
+);
+
+CREATE TABLE bandwidth_per_hour (
+    id SERIAL PRIMARY KEY,
+    node_id varchar REFERENCES nodes (name) NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
+    bytes_transferred integer NOT NULL
+);
+
+CREATE TABLE bandwidth_per_day (
+    id SERIAL PRIMARY KEY,
+    node_id varchar REFERENCES nodes (name) NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
+    bytes_transferred integer NOT NULL
+);
+
 CREATE FUNCTION merge_node(v_name varchar)
 RETURNS varchar AS $$
 BEGIN
@@ -454,3 +475,39 @@ BEGIN
     RETURN v_count;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE FUNCTION
+compute_histograms()
+RETURNS void AS $$
+
+DELETE FROM bandwidth_per_minute;
+INSERT INTO bandwidth_per_minute
+(node_id, timestamp, bytes_transferred)
+SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, sum(size)
+FROM packets, updates, sessions, anonymization_contexts, nodes
+WHERE packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id;
+
+DELETE FROM bandwidth_per_hour;
+INSERT INTO bandwidth_per_hour
+(node_id, timestamp, bytes_transferred)
+SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, sum(size)
+FROM packets, updates, sessions, anonymization_contexts, nodes
+WHERE packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id;
+
+DELETE FROM bandwidth_per_day;
+INSERT INTO bandwidth_per_day
+(node_id, timestamp, bytes_transferred)
+SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, sum(size)
+FROM packets, updates, sessions, anonymization_contexts, nodes
+WHERE packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id;
+
+$$ LANGUAGE SQL;
