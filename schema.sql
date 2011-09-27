@@ -440,3 +440,17 @@ BEGIN
     RETURN v_id;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE FUNCTION
+count_out_of_order(v_session_id int, v_sequence_number int)
+RETURNS int AS $$
+DECLARE
+    v_count int;
+BEGIN
+    SELECT COUNT(id) INTO v_count
+    FROM updates
+    WHERE session_id = v_session_id
+    AND sequence_number >= v_sequence_number;
+    RETURN v_count;
+END;
+$$ LANGUAGE plpgsql;

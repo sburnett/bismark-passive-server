@@ -20,8 +20,8 @@ class BismarkPassiveDatabase(object):
     merge_packet_text = 'SELECT merge_packet (%s, %s, timestamp %s, %s)'
     lookup_local_address_for_session = \
             'SELECT lookup_local_address_for_session (%s, %s)'
-    lookup_flow_for_session = \
-            'SELECT lookup_flow_for_session (%s, %s)'
+    lookup_flow_for_session = 'SELECT lookup_flow_for_session (%s, %s)'
+    check_out_of_order_text = 'SELECT count_out_of_order (%s, %s)'
 
     def __init__(self, user, database):
         self._conn = psycopg2.connect(user=user, database=database)
@@ -52,6 +52,10 @@ class BismarkPassiveDatabase(object):
                 self.merge_session_text,
                 anonymization_context_id,
                 str(parsed_update.creation_time))
+        if self._execute_command(self.check_out_of_order_text,
+                                 session_id,
+                                 parsed_update.sequence_number) > 0:
+            raise ValueError('Attempting to process an old update!')
         (pcap_received, pcap_dropped, iface_dropped) = (-1, -1, -1)
         try:
             pcap_received = parsed_update.pcap_received
