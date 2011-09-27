@@ -23,8 +23,8 @@ class BismarkPassiveDatabase(object):
     lookup_flow_for_session = \
             'SELECT lookup_flow_for_session (%s, %s)'
 
-    def __init__(self, connection_string):
-        self._conn = psycopg2.connect(connection_string)
+    def __init__(self, user, database):
+        self._conn = psycopg2.connect(user=user, database=database)
 
     def _execute_command(self, command, *args):
         cur = self._conn.cursor()
