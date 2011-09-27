@@ -38,12 +38,12 @@ def main():
             update_handle.close()
             updates.append(parser.PassiveUpdate(update_content))
 
+        shutil.rmtree(extract_dir)
+        shutil.move(filename, args['archive_directory'])
+
         updates.sort(key=lambda u: (u.creation_time, u.sequence_number))
         for update in updates:
             database.import_update(update)
-
-        shutil.rmtree(extract_dir)
-        shutil.move(filename, args['archive_directory'])
 
 if __name__ == '__main__':
     main()
