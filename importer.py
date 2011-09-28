@@ -26,13 +26,17 @@ def main():
     database = db.BismarkPassiveDatabase(args['db_user'], args['db_name'])
     filenames = sorted(glob.glob(os.path.join(args['updates_directory'], '*.tar')))
     for filename in filenames:
+        print 'Processing', filename
         tarball = tarfile.open(filename)
         extract_dir = tempfile.mkdtemp(prefix='bismark-passive-')
         tarball.extractall(extract_dir)
         tarball.close()
 
         updates = []
-        for update_file in glob.glob(os.path.join(extract_dir, '*.gz')):
+        update_files = glob.glob(os.path.join(extract_dir, '*.gz'))
+        update_files.sort(key=lambda f: os.path.getmtime(f))
+        for update_file in update_files:
+            print '\t', update_file
             update_handle = gzip.open(update_file, 'rb')
             update_content = update_handle.read()
             update_handle.close()
