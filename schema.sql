@@ -14,6 +14,12 @@ CREATE TABLE sessions (
     UNIQUE (anonymization_context_id, key)
 );
 
+CREATE TABLE whitelisted_domains (
+    session_id integer REFERENCES sessions (id) NOT NULL,
+    domain varchar NOT NULL,
+    PRIMARY KEY (session_id, domain)
+);
+
 CREATE TABLE updates (
     id SERIAL PRIMARY KEY,
     session_id integer REFERENCES sessions (id) NOT NULL,
@@ -125,6 +131,17 @@ BEGIN
      INSERT INTO nodes (name) SELECT v_name WHERE NOT EXISTS
      (SELECT 0 FROM nodes WHERE name = v_name);
      RETURN v_name;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE FUNCTION
+merge_whitelisted_domain(v_session_id integer, v_domain varchar)
+RETURNS void AS $$
+BEGIN
+     INSERT INTO whitelisted_domains (session_id, domain) SELECT v_session_id, v_domain WHERE NOT EXISTS
+     (SELECT 0 FROM whitelisted_domains
+        WHERE session_id = v_session_id
+        AND domain = v_domain);
 END;
 $$ LANGUAGE plpgsql;
 

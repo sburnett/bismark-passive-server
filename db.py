@@ -4,6 +4,7 @@ class BismarkPassiveDatabase(object):
     UNANONYMIZED_SIGNATURE = ''
 
     merge_node_text = 'SELECT merge_node (%s)'
+    merge_whitelisted_domain_text = 'SELECT merge_whitelisted_domain (%s, %s)'
     merge_anonymization_context_text = \
             'SELECT merge_anonymization_context (%s, %s)'
     merge_session_text = 'SELECT merge_session (%s, %s)'
@@ -78,6 +79,11 @@ class BismarkPassiveDatabase(object):
                 parsed_update.pcap_dropped,
                 parsed_update.iface_dropped)
         self._conn.commit()
+
+        for domain in parsed_update.whitelist:
+            self._execute_command(self.merge_whitelisted_domain_text,
+                                  session_id,
+                                  domain)
 
         for idx, entry in enumerate(parsed_update.addresses):
             mac_address_id = self._execute_command(self.merge_mac_address_text,

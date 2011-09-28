@@ -9,6 +9,7 @@ class TestParser(unittest.TestCase):
     def test_unanonymized_header(self):
         source = """BISMARKID 1234567890 12
 
+
                     UNANONYMIZED
 
                     0 0
@@ -27,6 +28,7 @@ class TestParser(unittest.TestCase):
 
     def test_anonymized_header(self):
         source = """BISMARKID 1234567890 12
+
 
                     KEY
 
@@ -49,6 +51,7 @@ class TestParser(unittest.TestCase):
         source = """BISMARKID 0 0
                     12 21 43
 
+
                     KEY
 
                     0 0
@@ -67,6 +70,7 @@ class TestParser(unittest.TestCase):
 
     def test_packet_series(self):
         source = """BISMARKID 0 0
+
 
                     UNANONYMIZED
 
@@ -96,6 +100,7 @@ class TestParser(unittest.TestCase):
 
     def test_flow_table(self):
         source = """BISMARKID 0 0
+
 
                     UNANONYMIZED
 
@@ -132,6 +137,7 @@ class TestParser(unittest.TestCase):
 
     def test_dns_table(self):
         source = """BISMARKID 0 0
+
 
                     UNANONYMIZED
 
@@ -172,6 +178,7 @@ class TestParser(unittest.TestCase):
     def test_address_table(self):
         source = """BISMARKID 0 0
 
+
                     UNANONYMIZED
 
                     0 0
@@ -193,6 +200,25 @@ class TestParser(unittest.TestCase):
         self.assertTrue(update.addresses[0].ip_address == '1234ab')
         self.assertTrue(update.addresses[1].mac_address == 'FEDCBA')
         self.assertTrue(update.addresses[1].ip_address == 'ba4321')
+
+    def test_whitelist(self):
+        source = """BISMARKID 1234567890 12
+
+                    foo.com
+                    bar.org
+
+                    UNANONYMIZED
+
+                    0 0
+
+                    0 0 0 0
+
+                    0 0
+
+
+                    0 0"""
+        update = parser.PassiveUpdate(format_source(source))
+        self.assertTrue(update.whitelist == ['foo.com', 'bar.org'])
 
 if __name__ == '__main__':
     unittest.main()

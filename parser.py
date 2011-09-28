@@ -31,12 +31,13 @@ class PassiveUpdate(object):
 
         sections = {
                 'intro': sections[0],
-                'anonymization': sections[1],
-                'packet_series': sections[2],
-                'flow_table': sections[3],
-                'dns_table_a': sections[4],
-                'dns_table_cname': sections[5],
-                'address_table': sections[6]
+                'whitelist': sections[1],
+                'anonymization': sections[2],
+                'packet_series': sections[3],
+                'flow_table': sections[4],
+                'dns_table_a': sections[5],
+                'dns_table_cname': sections[6],
+                'address_table': sections[7]
                 }
 
         intro_ids = sections['intro'][0].split()
@@ -48,6 +49,8 @@ class PassiveUpdate(object):
             self.pcap_received = intro_stats[0]
             self.pcap_dropped = intro_stats[1]
             self.iface_dropped = intro_stats[2]
+
+        self.whitelist = list(sections['whitelist'])
 
         if sections['anonymization'][0] == 'UNANONYMIZED':
             self.anonymized = False
