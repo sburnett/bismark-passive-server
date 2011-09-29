@@ -7,9 +7,9 @@ FlowEntry = namedtuple('FlowTable',
                            'transport_protocol',
                            'source_port', 'destination_port'])
 DnsAEntry = namedtuple('DnsTableA',
-                       ['address_id', 'anonymized', 'domain', 'ip_address'])
+                       ['address_id', 'anonymized', 'domain', 'ip_address', 'ttl'])
 DnsCnameEntry = namedtuple('DnsCnameTable',
-                           ['address_id', 'anonymized', 'domain', 'cname'])
+                           ['address_id', 'anonymized', 'domain', 'cname', 'ttl'])
 AddressEntry = namedtuple('AddressTable', ['mac_address', 'ip_address'])
 
 def parse_sections(lines):
@@ -98,22 +98,24 @@ class PassiveUpdate(object):
         self.dropped_cname_records = dns_stats[1]
         self.a_records = []
         for line in sections['dns_table_a'][1:]:
-            address_id, anonymized, domain, address = line.split()
+            address_id, anonymized, domain, address, ttl = line.split()
             self.a_records.append(DnsAEntry(
                 address_id = int(address_id),
                 anonymized = int(anonymized),
                 domain = domain,
-                ip_address = address
+                ip_address = address,
+                ttl = ttl,
                 ))
 
         self.cname_records = []
         for line in sections['dns_table_cname']:
-            address_id, anonymized, domain, cname = line.split()
+            address_id, anonymized, domain, cname, ttl = line.split()
             self.cname_records.append(DnsCnameEntry(
                 address_id = int(address_id),
                 anonymized = int(anonymized),
                 domain = domain,
-                cname = cname
+                cname = cname,
+                ttl = ttl
                 ))
 
         address_stats = [ int(w) for w in sections['address_table'][0].split() ]
