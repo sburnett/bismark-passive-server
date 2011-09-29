@@ -1,3 +1,6 @@
+CREATE SCHEMA passive;
+SET search_path TO passive;
+
 CREATE TABLE nodes (name varchar PRIMARY KEY);
 
 CREATE TABLE anonymization_contexts (
@@ -102,27 +105,6 @@ CREATE TABLE packets (
     flow_id integer REFERENCES flows (id) NOT NULL,
     timestamp timestamp with time zone NOT NULL,
     size integer NOT NULL
-);
-
-CREATE TABLE bytes_per_minute (
-    id SERIAL PRIMARY KEY,
-    node_id varchar REFERENCES nodes (name) NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
-    bytes_transferred integer NOT NULL
-);
-
-CREATE TABLE bytes_per_hour (
-    id SERIAL PRIMARY KEY,
-    node_id varchar REFERENCES nodes (name) NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
-    bytes_transferred integer NOT NULL
-);
-
-CREATE TABLE bytes_per_day (
-    id SERIAL PRIMARY KEY,
-    node_id varchar REFERENCES nodes (name) NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
-    bytes_transferred integer NOT NULL
 );
 
 CREATE FUNCTION merge_node(v_name varchar)
@@ -493,33 +475,59 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE FUNCTION
-compute_histograms()
-RETURNS void AS $$
+CREATE OR REPLACE VIEW packets_by_minute
+(packet_id, rounded_timestamp) AS
+SELECT id, date_trunc('minute', timestamp) FROM packets;
 
-DELETE FROM bytes_per_minute;
-INSERT INTO bytes_per_minute
-(node_id, timestamp, bytes_transferred)
-SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, sum(size)
-FROM packets, updates, sessions, anonymization_contexts, nodes
-WHERE packets.update_id = updates.id
+CREATE OR REPLACE VIEW packets_by_hour
+(packet_id, rounded_timestamp) AS
+SELECT id, date_trunc('hour', timestamp) FROM packets;
+
+CREATE OR REPLACE VIEW packets_by_day
+(packet_id, rounded_timestamp) AS
+SELECT id, date_trunc('day', timestamp) FROM packets;
+
+CREATE OR REPLACE VIEW bytes_per_minute
+(node_id, timestamp, bytes_transferred) AS
+SELECT node_id, rounded_timestamp, sum(size)
+FROM packets, packets_by_minute, updates, sessions, anonymization_contexts, nodes
+WHERE packets.id = packets_by_minute.packet_id
+AND packets.update_id = updates.id
 AND updates.session_id = sessions.id
 AND sessions.anonymization_context_id = anonymization_contexts.id
 GROUP BY rounded_timestamp, anonymization_contexts.node_id;
 
-DELETE FROM bytes_per_hour;
-INSERT INTO bytes_per_hour
-(node_id, timestamp, bytes_transferred)
-SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, sum(size)
-FROM packets, updates, sessions, anonymization_contexts, nodes
-WHERE packets.update_id = updates.id
+CREATE OR REPLACE VIEW bytes_per_hour
+(node_id, timestamp, bytes_transferred) AS
+SELECT node_id, rounded_timestamp, sum(size)
+FROM packets, packets_by_hour, updates, sessions, anonymization_contexts, nodes
+WHERE packets.id = packets_by_hour.packet_id
+AND packets.update_id = updates.id
 AND updates.session_id = sessions.id
 AND sessions.anonymization_context_id = anonymization_contexts.id
 GROUP BY rounded_timestamp, anonymization_contexts.node_id;
 
-DELETE FROM bytes_per_day;
-INSERT INTO bytes_per_day
-(node_id, timestamp, bytes_transferred)
+CREATE OR REPLACE VIEW bytes_per_day
+(node_id, timestamp, bytes_transferred) AS
+SELECT node_id, rounded_timestamp, sum(size)
+FROM packets, packets_by_day, updates, sessions, anonymization_contexts, nodes
+WHERE packets.id = packets_by_day.packet_id
+AND packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id;
+
+--CREATE OR REPLACE VIEW bytes_per_hour
+--(node_id, timestamp, bytes_transferred) AS
+--SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, sum(size)
+--FROM packets, updates, sessions, anonymization_contexts, nodes
+--WHERE packets.update_id = updates.id
+--AND updates.session_id = sessions.id
+--AND sessions.anonymization_context_id = anonymization_contexts.id
+--GROUP BY rounded_timestamp, anonymization_contexts.node_id;
+
+CREATE OR REPLACE VIEW bytes_per_day
+(node_id, timestamp, bytes_transferred) AS
 SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, sum(size)
 FROM packets, updates, sessions, anonymization_contexts, nodes
 WHERE packets.update_id = updates.id
@@ -527,4 +535,52 @@ AND updates.session_id = sessions.id
 AND sessions.anonymization_context_id = anonymization_contexts.id
 GROUP BY rounded_timestamp, anonymization_contexts.node_id;
 
-$$ LANGUAGE SQL;
+CREATE OR REPLACE VIEW domains_for_ip_address
+(ip_address_id, domain_name) AS
+SELECT ip_address_id, domain_names.data
+FROM dns_a_records, dns_cname_records, domain_names
+WHERE dns_a_records.domain_name_id = domain_names.id
+OR (dns_a_records.domain_name_id = dns_cname_records.cname_id
+    AND dns_cname_records.domain_name_id = domain_names.id);
+
+CREATE OR REPLACE VIEW whitelisted_domain_flows
+(flow_id, domain) AS
+SELECT DISTINCT flows.id, whitelisted_domains.domain
+FROM flows, domains_for_ip_address, updates, sessions, whitelisted_domains
+WHERE (flows.source_ip_id = domains_for_ip_address.ip_address_id
+    OR flows.destination_ip_id = domains_for_ip_address.ip_address_id)
+AND (domains_for_ip_address.domain_name LIKE '%.' || whitelisted_domains.domain
+    OR domains_for_ip_address.domain_name = whitelisted_domains.domain)
+AND flows.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.id = whitelisted_domains.session_id;
+
+CREATE OR REPLACE VIEW bytes_per_domain_per_minute
+(node_id, timestamp, domain, bytes_transferred) AS
+SELECT anonymization_contexts.node_id, date_trunc('minute', timestamp) AS rounded_timestamp, whitelisted_domain_flows.domain, sum(packets.size)
+FROM packets, whitelisted_domain_flows, updates, sessions, anonymization_contexts
+WHERE packets.flow_id = whitelisted_domain_flows.flow_id
+AND packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id, whitelisted_domain_flows.domain;
+
+CREATE OR REPLACE VIEW bytes_per_domain_per_hour
+(node_id, timestamp, domain, bytes_transferred) AS
+SELECT anonymization_contexts.node_id, date_trunc('hour', timestamp) AS rounded_timestamp, whitelisted_domain_flows.domain, sum(packets.size)
+FROM packets, whitelisted_domain_flows, updates, sessions, anonymization_contexts
+WHERE packets.flow_id = whitelisted_domain_flows.flow_id
+AND packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id, whitelisted_domain_flows.domain;
+
+CREATE OR REPLACE VIEW bytes_per_domain_per_day
+(node_id, timestamp, domain, bytes_transferred) AS
+SELECT anonymization_contexts.node_id, date_trunc('day', timestamp) AS rounded_timestamp, whitelisted_domain_flows.domain, sum(packets.size)
+FROM packets, whitelisted_domain_flows, updates, sessions, anonymization_contexts
+WHERE packets.flow_id = whitelisted_domain_flows.flow_id
+AND packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id, whitelisted_domain_flows.domain;
