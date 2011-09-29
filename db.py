@@ -18,6 +18,11 @@ class BismarkPassiveDatabase(object):
         cur.close()
         return result
 
+    def _execute_commands(self, command, args):
+        cur = self._conn.cursor()
+        cur.executemany('SELECT %s;' % command, args)
+        cur.close()
+
     def _merge_node(self, *args):
         return self._execute_command('merge_node (%s)', args)
     def _merge_whitelisted_domain(self, *args):
@@ -51,6 +56,9 @@ class BismarkPassiveDatabase(object):
                 'merge_flow (%s, %s, %s, %s, %s, %s, %s)', args)
     def _merge_packet(self, *args):
         return self._execute_command(
+                'merge_packet (%s, %s, timestamp %s, %s)', args)
+    def _merge_packets(self, args):
+        return self._execute_commands(
                 'merge_packet (%s, %s, timestamp %s, %s)', args)
     def _lookup_local_address_for_session(self, *args):
         return self._execute_command(
@@ -164,12 +172,15 @@ class BismarkPassiveDatabase(object):
                              entry.source_port,
                              entry.destination_port)
 
+        packet_entries = []
         for entry in parsed_update.packet_series:
             flow_id = self._lookup_flow_for_session(session_id, entry.flow_id)
-            self._merge_packet(update_id,
-                               flow_id,
-                               psycopg2.TimestampFromTicks(entry.timestamp / 1e6),
-                               entry.size)
+            packet_entries.append((update_id,
+                                   flow_id,
+                                   psycopg2.TimestampFromTicks(entry.timestamp / 1e6),
+                                   entry.size))
+
+        self._merge_packets(packet_entries)
 
         self._conn.commit()
 

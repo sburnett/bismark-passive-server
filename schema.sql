@@ -1,6 +1,8 @@
 CREATE SCHEMA passive;
 SET search_path TO passive;
 
+\i materialized_views.sql
+
 CREATE TABLE nodes (name varchar PRIMARY KEY);
 
 CREATE TABLE anonymization_contexts (
@@ -475,56 +477,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE VIEW packets_by_minute
-(packet_id, rounded_timestamp) AS
-SELECT id, date_trunc('minute', timestamp) FROM packets;
-
-CREATE OR REPLACE VIEW packets_by_hour
-(packet_id, rounded_timestamp) AS
-SELECT id, date_trunc('hour', timestamp) FROM packets;
-
-CREATE OR REPLACE VIEW packets_by_day
-(packet_id, rounded_timestamp) AS
-SELECT id, date_trunc('day', timestamp) FROM packets;
-
 CREATE OR REPLACE VIEW bytes_per_minute
 (node_id, timestamp, bytes_transferred) AS
-SELECT node_id, rounded_timestamp, sum(size)
-FROM packets, packets_by_minute, updates, sessions, anonymization_contexts, nodes
-WHERE packets.id = packets_by_minute.packet_id
-AND packets.update_id = updates.id
+SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, sum(size)
+FROM packets, updates, sessions, anonymization_contexts, nodes
+WHERE packets.update_id = updates.id
 AND updates.session_id = sessions.id
 AND sessions.anonymization_context_id = anonymization_contexts.id
 GROUP BY rounded_timestamp, anonymization_contexts.node_id;
 
 CREATE OR REPLACE VIEW bytes_per_hour
 (node_id, timestamp, bytes_transferred) AS
-SELECT node_id, rounded_timestamp, sum(size)
-FROM packets, packets_by_hour, updates, sessions, anonymization_contexts, nodes
-WHERE packets.id = packets_by_hour.packet_id
-AND packets.update_id = updates.id
+SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, sum(size)
+FROM packets, updates, sessions, anonymization_contexts, nodes
+WHERE packets.update_id = updates.id
 AND updates.session_id = sessions.id
 AND sessions.anonymization_context_id = anonymization_contexts.id
 GROUP BY rounded_timestamp, anonymization_contexts.node_id;
-
-CREATE OR REPLACE VIEW bytes_per_day
-(node_id, timestamp, bytes_transferred) AS
-SELECT node_id, rounded_timestamp, sum(size)
-FROM packets, packets_by_day, updates, sessions, anonymization_contexts, nodes
-WHERE packets.id = packets_by_day.packet_id
-AND packets.update_id = updates.id
-AND updates.session_id = sessions.id
-AND sessions.anonymization_context_id = anonymization_contexts.id
-GROUP BY rounded_timestamp, anonymization_contexts.node_id;
-
---CREATE OR REPLACE VIEW bytes_per_hour
---(node_id, timestamp, bytes_transferred) AS
---SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, sum(size)
---FROM packets, updates, sessions, anonymization_contexts, nodes
---WHERE packets.update_id = updates.id
---AND updates.session_id = sessions.id
---AND sessions.anonymization_context_id = anonymization_contexts.id
---GROUP BY rounded_timestamp, anonymization_contexts.node_id;
 
 CREATE OR REPLACE VIEW bytes_per_day
 (node_id, timestamp, bytes_transferred) AS
@@ -584,3 +553,10 @@ AND packets.update_id = updates.id
 AND updates.session_id = sessions.id
 AND sessions.anonymization_context_id = anonymization_contexts.id
 GROUP BY rounded_timestamp, anonymization_contexts.node_id, whitelisted_domain_flows.domain;
+
+SELECT create_matview('mv_bytes_per_minute', 'bytes_per_minute');
+SELECT create_matview('mv_bytes_per_hour', 'bytes_per_hour');
+SELECT create_matview('mv_bytes_per_day', 'bytes_per_day');
+SELECT create_matview('mv_bytes_per_domain_per_minute', 'bytes_per_domain_per_minute');
+SELECT create_matview('mv_bytes_per_domain_per_hour', 'bytes_per_domain_per_hour');
+SELECT create_matview('mv_bytes_per_domain_per_day', 'bytes_per_domain_per_day');
