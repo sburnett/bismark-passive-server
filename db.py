@@ -1,3 +1,4 @@
+import datetime
 import psycopg2
 import psycopg2.extensions
 
@@ -47,19 +48,19 @@ class BismarkPassiveDatabase(object):
                 'merge_local_address (%s, %s, %s, %s)', args)
     def _merge_dns_a_record(self, *args):
         return self._execute_command(
-                'merge_dns_a_record (%s, %s, %s, %s)', args)
+                'merge_dns_a_record (%s, %s, %s, %s, %s)', args)
     def _merge_dns_cname_record(self, *args):
         return self._execute_command(
-                'merge_dns_cname_record (%s, %s, %s, %s)', args)
+                'merge_dns_cname_record (%s, %s, %s, %s, interval %s)', args)
     def _merge_flow(self, *args):
         return self._execute_command(
                 'merge_flow (%s, %s, %s, %s, %s, %s, %s)', args)
     def _merge_packet(self, *args):
         return self._execute_command(
-                'merge_packet (%s, %s, timestamp %s, %s)', args)
+                'merge_packet (%s, %s, %s, %s)', args)
     def _merge_packets(self, args):
         return self._execute_commands(
-                'merge_packet (%s, %s, timestamp %s, %s)', args)
+                'merge_packet (%s, %s, %s, %s)', args)
     def _lookup_local_address_for_session(self, *args):
         return self._execute_command(
                 'lookup_local_address_for_session (%s, %s)', args)
@@ -121,36 +122,6 @@ class BismarkPassiveDatabase(object):
                                                          mac_address_id,
                                                          ip_address_id)
 
-        for entry in parsed_update.a_records:
-            if entry.anonymized:
-                context_id = anonymization_context_id
-            else:
-                context_id = unanonymized_context_id
-            local_address_id = self._lookup_local_address_for_session(
-                    session_id,
-                    entry.address_id)
-            domain_name_id = self._merge_domain_name(context_id, entry.domain)
-            ip_address_id = self._merge_ip_address(context_id, entry.ip_address)
-            self._merge_dns_a_record(update_id,
-                                     local_address_id,
-                                     domain_name_id,
-                                     ip_address_id)
-
-        for entry in parsed_update.cname_records:
-            if entry.anonymized:
-                context_id = anonymization_context_id
-            else:
-                context_id = unanonymized_context_id
-            local_address_id = self._lookup_local_address_for_session(
-                    session_id,
-                    entry.address_id)
-            domain_name_id = self._merge_domain_name(context_id, entry.domain)
-            cname_id = self._merge_domain_name(context_id, entry.cname)
-            self._merge_dns_cname_record(update_id,
-                                         local_address_id,
-                                         domain_name_id,
-                                         cname_id)
-
         for entry in parsed_update.flow_table:
             if entry.source_ip_anonymized:
                 source_context_id = anonymization_context_id
@@ -172,15 +143,49 @@ class BismarkPassiveDatabase(object):
                              entry.source_port,
                              entry.destination_port)
 
-        packet_entries = []
-        for entry in parsed_update.packet_series:
+        packet_ids = {}
+        for remote_packet_id, entry in enumerate(parsed_update.packet_series):
             flow_id = self._lookup_flow_for_session(session_id, entry.flow_id)
-            packet_entries.append((update_id,
-                                   flow_id,
-                                   psycopg2.TimestampFromTicks(entry.timestamp / 1e6),
-                                   entry.size))
+            packet_id = self._merge_packet(
+                    update_id,
+                    flow_id,
+                    psycopg2.extensions.adapt(entry.timestamp),
+                    entry.size)
+            packet_ids[remote_packet_id] = packet_id
 
-        self._merge_packets(packet_entries)
+        for entry in parsed_update.a_records:
+            if entry.anonymized:
+                context_id = anonymization_context_id
+            else:
+                context_id = unanonymized_context_id
+            packet_id = packet_ids[entry.packet_id]
+            local_address_id = self._lookup_local_address_for_session(
+                    session_id,
+                    entry.address_id)
+            domain_name_id = self._merge_domain_name(context_id, entry.domain)
+            ip_address_id = self._merge_ip_address(context_id, entry.ip_address)
+            self._merge_dns_a_record(packet_id,
+                                     local_address_id,
+                                     domain_name_id,
+                                     ip_address_id,
+                                     psycopg2.extensions.adapt(entry.ttl))
+
+        for entry in parsed_update.cname_records:
+            if entry.anonymized:
+                context_id = anonymization_context_id
+            else:
+                context_id = unanonymized_context_id
+            packet_id = packet_ids[entry.packet_id]
+            local_address_id = self._lookup_local_address_for_session(
+                    session_id,
+                    entry.address_id)
+            domain_name_id = self._merge_domain_name(context_id, entry.domain)
+            cname_id = self._merge_domain_name(context_id, entry.cname)
+            self._merge_dns_cname_record(packet_id,
+                                         local_address_id,
+                                         domain_name_id,
+                                         cname_id,
+                                         psycopg2.extensions.adapt(entry.ttl))
 
         self._conn.commit()
 
