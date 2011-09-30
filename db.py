@@ -35,7 +35,7 @@ class BismarkPassiveDatabase(object):
         return self._execute_command('merge_session (%s, %s)', args)
     def _merge_update(self, *args):
         return self._execute_command(
-                'merge_update (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                'merge_update (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
                 args)
     def _merge_mac_address(self, *args):
         return self._execute_command('merge_mac_address (%s, %s)', args)
@@ -95,6 +95,7 @@ class BismarkPassiveDatabase(object):
         except:
             pass
         update_id = self._merge_update(session_id,
+                                       psycopg2.extensions.adapt(parsed_update.timestamp),
                                        parsed_update.sequence_number,
                                        parsed_update.packet_series_dropped,
                                        parsed_update.flow_table_size,

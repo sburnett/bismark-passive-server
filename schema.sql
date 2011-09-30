@@ -28,6 +28,7 @@ CREATE TABLE whitelisted_domains (
 CREATE TABLE updates (
     id SERIAL PRIMARY KEY,
     session_id integer REFERENCES sessions (id) NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
     sequence_number integer NOT NULL,
     pcap_received integer,
     pcap_dropped integer,
@@ -111,6 +112,176 @@ CREATE TABLE dns_cname_records (
     UNIQUE (packet_id, local_address_id, domain_name_id, cname_id)
 );
 
+CREATE OR REPLACE VIEW bytes_per_minute
+(node_id, timestamp, bytes_transferred) AS
+SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, sum(size)
+FROM packets, updates, sessions, anonymization_contexts, nodes
+WHERE packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id;
+SELECT create_matview('mv_bytes_per_minute', 'bytes_per_minute');
+
+CREATE OR REPLACE VIEW bytes_per_hour
+(node_id, timestamp, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, sum(bytes_transferred)
+FROM mv_bytes_per_minute
+GROUP BY rounded_timestamp, node_id;
+
+CREATE OR REPLACE VIEW bytes_per_day
+(node_id, timestamp, bytes_transferred) AS
+SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, sum(bytes_transferred)
+FROM mv_bytes_per_minute
+GROUP BY rounded_timestamp, node_id;
+
+CREATE OR REPLACE VIEW bytes_total
+(node_id, bytes_transferred) AS
+SELECT node_id, sum(bytes_transferred)
+FROM mv_bytes_per_minute
+GROUP BY node_id;
+
+CREATE OR REPLACE VIEW unanonymized_domain_names AS
+SELECT domain_names.*
+FROM domain_names, anonymization_contexts
+WHERE domain_names.anonymization_context_id = anonymization_contexts.id
+AND anonymization_contexts.signature = '';
+SELECT create_matview('mv_unanonymized_domain_names', 'unanonymized_domain_names');
+CREATE INDEX ON mv_unanonymized_domain_names (id);
+
+CREATE OR REPLACE VIEW first_packet_in_flow
+(flow_id, packet_id, timestamp) AS
+SELECT DISTINCT ON (flow_id) flow_id, id, timestamp
+FROM packets
+ORDER BY flow_id, timestamp;
+SELECT create_matview('mv_first_packet_in_flow', 'first_packet_in_flow');
+CREATE INDEX ON mv_first_packet_in_flow (flow_id, timestamp);
+
+CREATE OR REPLACE VIEW time_window_for_dns_a_records
+(id, start_timestamp, end_timestamp) AS
+SELECT dns_a_records.id, timestamp, timestamp + ttl
+FROM dns_a_records, packets, mv_unanonymized_domain_names
+WHERE packet_id = packets.id
+AND dns_a_records.domain_name_id = mv_unanonymized_domain_names.id;
+SELECT create_matview('mv_time_window_for_dns_a_records', 'time_window_for_dns_a_records');
+CREATE INDEX ON mv_time_window_for_dns_a_records (id, start_timestamp, end_timestamp);
+
+CREATE OR REPLACE VIEW time_window_for_dns_cname_records
+(id, start_timestamp, end_timestamp) AS
+SELECT dns_cname_records.id, timestamp, timestamp + ttl
+FROM dns_cname_records, packets, mv_unanonymized_domain_names
+WHERE packet_id = packets.id
+AND dns_cname_records.domain_name_id = mv_unanonymized_domain_names.id;
+SELECT create_matview('mv_time_window_for_dns_cname_records', 'time_window_for_dns_cname_records');
+CREATE INDEX ON mv_time_window_for_dns_cname_records (id, start_timestamp, end_timestamp);
+
+CREATE OR REPLACE VIEW domains_for_flow
+(flow_id, domain_name_id) AS
+(SELECT DISTINCT flows.id, domain_names.id
+FROM domain_names, dns_a_records, flows, mv_first_packet_in_flow, mv_time_window_for_dns_a_records
+WHERE flows.id = mv_first_packet_in_flow.flow_id
+AND (flows.source_ip_id = dns_a_records.ip_address_id
+    OR flows.destination_ip_id = dns_a_records.ip_address_id)
+AND dns_a_records.id = mv_time_window_for_dns_a_records.id
+AND mv_first_packet_in_flow.timestamp >= mv_time_window_for_dns_a_records.start_timestamp
+AND mv_first_packet_in_flow.timestamp <= mv_time_window_for_dns_a_records.end_timestamp + interval '10 seconds'
+AND dns_a_records.domain_name_id = domain_names.id)
+UNION
+(SELECT DISTINCT flows.id, domain_names.id
+FROM domain_names, dns_a_records, dns_cname_records, flows, mv_first_packet_in_flow, mv_time_window_for_dns_cname_records
+WHERE flows.id = mv_first_packet_in_flow.flow_id
+AND (flows.source_ip_id = dns_a_records.ip_address_id
+    OR flows.destination_ip_id = dns_a_records.ip_address_id)
+AND dns_a_records.domain_name_id = dns_cname_records.cname_id
+AND dns_cname_records.id = mv_time_window_for_dns_cname_records.id
+AND mv_first_packet_in_flow.timestamp >= mv_time_window_for_dns_cname_records.start_timestamp
+AND mv_first_packet_in_flow.timestamp <= mv_time_window_for_dns_cname_records.end_timestamp + interval '10 seconds'
+AND dns_cname_records.domain_name_id = domain_names.id);
+SELECT create_matview('mv_domains_for_flow', 'domains_for_flow');
+CREATE INDEX ON mv_domains_for_flow (flow_id, domain_name_id);
+
+CREATE OR REPLACE VIEW whitelisted_domain_flows
+(flow_id, domain) AS
+SELECT DISTINCT flows.id, whitelisted_domains.domain
+FROM flows, mv_domains_for_flow, domain_names, updates, whitelisted_domains
+WHERE flows.id = mv_domains_for_flow.flow_id
+AND mv_domains_for_flow.domain_name_id = domain_names.id
+AND (domain_names.data LIKE '%.' || whitelisted_domains.domain
+    OR domain_names.data = whitelisted_domains.domain)
+AND flows.update_id = updates.id
+AND updates.session_id = whitelisted_domains.session_id;
+
+CREATE OR REPLACE VIEW bytes_per_domain_per_minute
+(node_id, timestamp, domain, bytes_transferred) AS
+SELECT anonymization_contexts.node_id, date_trunc('minute', timestamp) AS rounded_timestamp, whitelisted_domain_flows.domain, sum(packets.size)
+FROM packets, whitelisted_domain_flows, updates, sessions, anonymization_contexts
+WHERE packets.flow_id = whitelisted_domain_flows.flow_id
+AND packets.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+GROUP BY rounded_timestamp, anonymization_contexts.node_id, whitelisted_domain_flows.domain;
+SELECT create_matview('mv_bytes_per_domain_per_minute', 'bytes_per_domain_per_minute');
+
+CREATE OR REPLACE VIEW bytes_per_domain_per_hour
+(node_id, timestamp, domain, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, domain, sum(bytes_transferred)
+FROM mv_bytes_per_domain_per_minute
+GROUP BY rounded_timestamp, node_id, domain;
+
+CREATE OR REPLACE VIEW bytes_per_domain_per_day
+(node_id, timestamp, domain, bytes_transferred) AS
+SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, domain, sum(bytes_transferred)
+FROM mv_bytes_per_domain_per_minute
+GROUP BY rounded_timestamp, node_id, domain;
+
+CREATE OR REPLACE VIEW bytes_per_domain_total
+(node_id, domain, bytes_transferred) AS
+SELECT node_id, domain, sum(bytes_transferred)
+FROM mv_bytes_per_domain_per_minute
+GROUP BY node_id, domain;
+
+CREATE OR REPLACE VIEW bytes_per_port_per_minute
+(node_id, timestamp, port, bytes_transferred) AS
+SELECT node_id, rounded_timestamp, port, sum(bytes_transferred) FROM
+((SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, source_port AS port, sum(size) AS bytes_transferred
+FROM packets, flows, updates, sessions, anonymization_contexts, ip_addresses, local_addresses
+WHERE packets.flow_id = flows.id
+AND flows.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+AND flows.destination_ip_id = ip_addresses.id
+AND local_addresses.ip_address_id = ip_addresses.id
+GROUP BY node_id, source_port, rounded_timestamp)
+UNION
+(SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, destination_port AS port, sum(size) AS bytes_transferred
+FROM packets, flows, updates, sessions, anonymization_contexts, ip_addresses, local_addresses
+WHERE packets.flow_id = flows.id
+AND flows.update_id = updates.id
+AND updates.session_id = sessions.id
+AND sessions.anonymization_context_id = anonymization_contexts.id
+AND flows.source_ip_id = ip_addresses.id
+AND local_addresses.ip_address_id = ip_addresses.id
+GROUP BY node_id, destination_port, rounded_timestamp)) AS joined
+GROUP BY node_id, port, rounded_timestamp;
+SELECT create_matview('mv_bytes_per_port_per_minute', 'bytes_per_port_per_minute');
+
+CREATE OR REPLACE VIEW bytes_per_port_per_hour
+(node_id, timestamp, port, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, port, sum(bytes_transferred)
+FROM mv_bytes_per_port_per_minute
+GROUP BY rounded_timestamp, node_id, port;
+
+CREATE OR REPLACE VIEW bytes_per_port_per_day
+(node_id, timestamp, port, bytes_transferred) AS
+SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, port, sum(bytes_transferred)
+FROM mv_bytes_per_port_per_minute
+GROUP BY rounded_timestamp, node_id, port;
+
+CREATE OR REPLACE VIEW bytes_per_port_total
+(node_id, port, bytes_transferred) AS
+SELECT node_id, port, sum(bytes_transferred)
+FROM mv_bytes_per_port_per_minute
+GROUP BY node_id, port;
+
 CREATE FUNCTION merge_node(v_name varchar)
 RETURNS varchar AS $$
 BEGIN
@@ -168,6 +339,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE FUNCTION
 merge_update(v_session_id int,
+             v_timestamp timestamp with time zone,
              v_sequence_number int,
              v_packet_series_dropped int,
              v_flow_table_size int,
@@ -186,6 +358,7 @@ BEGIN
     BEGIN
         INSERT INTO updates
         (session_id,
+         timestamp,
          sequence_number,
          packet_series_dropped,
          flow_table_size,
@@ -198,6 +371,7 @@ BEGIN
          iface_dropped)
         VALUES
         (v_session_id,
+         v_timestamp,
          v_sequence_number,
          v_packet_series_dropped,
          v_flow_table_size,
@@ -470,173 +644,3 @@ BEGIN
     RETURN v_count;
 END;
 $$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE VIEW bytes_per_minute
-(node_id, timestamp, bytes_transferred) AS
-SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, sum(size)
-FROM packets, updates, sessions, anonymization_contexts, nodes
-WHERE packets.update_id = updates.id
-AND updates.session_id = sessions.id
-AND sessions.anonymization_context_id = anonymization_contexts.id
-GROUP BY rounded_timestamp, anonymization_contexts.node_id;
-SELECT create_matview('mv_bytes_per_minute', 'bytes_per_minute');
-
-CREATE OR REPLACE VIEW bytes_per_hour
-(node_id, timestamp, bytes_transferred) AS
-SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, sum(bytes_transferred)
-FROM mv_bytes_per_minute
-GROUP BY rounded_timestamp, node_id;
-
-CREATE OR REPLACE VIEW bytes_per_day
-(node_id, timestamp, bytes_transferred) AS
-SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, sum(bytes_transferred)
-FROM mv_bytes_per_minute
-GROUP BY rounded_timestamp, node_id;
-
-CREATE OR REPLACE VIEW bytes_total
-(node_id, bytes_transferred) AS
-SELECT node_id, sum(bytes_transferred)
-FROM mv_bytes_per_minute
-GROUP BY node_id;
-
-CREATE OR REPLACE VIEW unanonymized_domain_names AS
-SELECT domain_names.*
-FROM domain_names, anonymization_contexts
-WHERE domain_names.anonymization_context_id = anonymization_contexts.id
-AND anonymization_contexts.signature = '';
-SELECT create_matview('mv_unanonymized_domain_names', 'unanonymized_domain_names');
-CREATE INDEX ON mv_unanonymized_domain_names (id);
-
-CREATE OR REPLACE VIEW first_packet_in_flow
-(flow_id, packet_id, timestamp) AS
-SELECT DISTINCT ON (flow_id) flow_id, id, timestamp
-FROM packets
-ORDER BY flow_id, timestamp;
-SELECT create_matview('mv_first_packet_in_flow', 'first_packet_in_flow');
-CREATE INDEX ON mv_first_packet_in_flow (flow_id, timestamp);
-
-CREATE OR REPLACE VIEW time_window_for_dns_a_records
-(id, start_timestamp, end_timestamp) AS
-SELECT dns_a_records.id, timestamp, timestamp + ttl
-FROM dns_a_records, packets, mv_unanonymized_domain_names
-WHERE packet_id = packets.id
-AND dns_a_records.domain_name_id = mv_unanonymized_domain_names.id;
-SELECT create_matview('mv_time_window_for_dns_a_records', 'time_window_for_dns_a_records');
-CREATE INDEX ON mv_time_window_for_dns_a_records (id, start_timestamp, end_timestamp);
-
-CREATE OR REPLACE VIEW time_window_for_dns_cname_records
-(id, start_timestamp, end_timestamp) AS
-SELECT dns_cname_records.id, timestamp, timestamp + ttl
-FROM dns_cname_records, packets, mv_unanonymized_domain_names
-WHERE packet_id = packets.id
-AND dns_cname_records.domain_name_id = mv_unanonymized_domain_names.id;
-SELECT create_matview('mv_time_window_for_dns_cname_records', 'time_window_for_dns_cname_records');
-CREATE INDEX ON mv_time_window_for_dns_cname_records (id, start_timestamp, end_timestamp);
-
-CREATE OR REPLACE VIEW domains_for_flow
-(flow_id, domain_name_id) AS
-(SELECT DISTINCT flows.id, domain_names.id
-FROM domain_names, dns_a_records, flows, mv_first_packet_in_flow, mv_time_window_for_dns_a_records
-WHERE flows.id = mv_first_packet_in_flow.flow_id
-AND (flows.source_ip_id = dns_a_records.ip_address_id
-    OR flows.destination_ip_id = dns_a_records.ip_address_id)
-AND dns_a_records.id = mv_time_window_for_dns_a_records.id
-AND mv_first_packet_in_flow.timestamp >= mv_time_window_for_dns_a_records.start_timestamp
-AND mv_first_packet_in_flow.timestamp <= mv_time_window_for_dns_a_records.end_timestamp + interval '10 seconds'
-AND dns_a_records.domain_name_id = domain_names.id)
-UNION
-(SELECT DISTINCT flows.id, domain_names.id
-FROM domain_names, dns_a_records, dns_cname_records, flows, mv_first_packet_in_flow, mv_time_window_for_dns_cname_records
-WHERE flows.id = mv_first_packet_in_flow.flow_id
-AND (flows.source_ip_id = dns_a_records.ip_address_id
-    OR flows.destination_ip_id = dns_a_records.ip_address_id)
-AND dns_a_records.domain_name_id = dns_cname_records.cname_id
-AND dns_cname_records.id = mv_time_window_for_dns_cname_records.id
-AND mv_first_packet_in_flow.timestamp >= mv_time_window_for_dns_cname_records.start_timestamp
-AND mv_first_packet_in_flow.timestamp <= mv_time_window_for_dns_cname_records.end_timestamp + interval '10 seconds'
-AND dns_cname_records.domain_name_id = domain_names.id);
-SELECT create_matview('mv_domains_for_flow', 'domains_for_flow');
-CREATE INDEX ON mv_domains_for_flow (flow_id, domain_name_id);
-
-CREATE OR REPLACE VIEW whitelisted_domain_flows
-(flow_id, domain) AS
-SELECT DISTINCT flows.id, whitelisted_domains.domain
-FROM flows, mv_domains_for_flow, domain_names, updates, whitelisted_domains
-WHERE flows.id = mv_domains_for_flow.flow_id
-AND mv_domains_for_flow.domain_name_id = domain_names.id
-AND (domain_names.data LIKE '%.' || whitelisted_domains.domain
-    OR domain_names.data = whitelisted_domains.domain)
-AND flows.update_id = updates.id
-AND updates.session_id = whitelisted_domains.session_id;
-
-CREATE OR REPLACE VIEW bytes_per_domain_per_minute
-(node_id, timestamp, domain, bytes_transferred) AS
-SELECT anonymization_contexts.node_id, date_trunc('minute', timestamp) AS rounded_timestamp, whitelisted_domain_flows.domain, sum(packets.size)
-FROM packets, whitelisted_domain_flows, updates, sessions, anonymization_contexts
-WHERE packets.flow_id = whitelisted_domain_flows.flow_id
-AND packets.update_id = updates.id
-AND updates.session_id = sessions.id
-AND sessions.anonymization_context_id = anonymization_contexts.id
-GROUP BY rounded_timestamp, anonymization_contexts.node_id, whitelisted_domain_flows.domain;
-SELECT create_matview('mv_bytes_per_domain_per_minute', 'bytes_per_domain_per_minute');
-
-CREATE OR REPLACE VIEW bytes_per_domain_per_hour
-(node_id, timestamp, domain, bytes_transferred) AS
-SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, domain, sum(bytes_transferred)
-FROM mv_bytes_per_domain_per_minute
-GROUP BY rounded_timestamp, node_id, domain;
-
-CREATE OR REPLACE VIEW bytes_per_domain_per_day
-(node_id, timestamp, domain, bytes_transferred) AS
-SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, domain, sum(bytes_transferred)
-FROM mv_bytes_per_domain_per_minute
-GROUP BY rounded_timestamp, node_id, domain;
-
-CREATE OR REPLACE VIEW bytes_per_domain_total
-(node_id, domain, bytes_transferred) AS
-SELECT node_id, domain, sum(bytes_transferred)
-FROM mv_bytes_per_domain_per_minute
-GROUP BY node_id, domain;
-
-CREATE OR REPLACE VIEW bytes_per_port_per_minute
-(node_id, timestamp, port, bytes_transferred) AS
-SELECT node_id, rounded_timestamp, port, sum(bytes_transferred) FROM
-((SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, source_port AS port, sum(size) AS bytes_transferred
-FROM packets, flows, updates, sessions, anonymization_contexts, ip_addresses, local_addresses
-WHERE packets.flow_id = flows.id
-AND flows.update_id = updates.id
-AND updates.session_id = sessions.id
-AND sessions.anonymization_context_id = anonymization_contexts.id
-AND flows.destination_ip_id = ip_addresses.id
-AND local_addresses.ip_address_id = ip_addresses.id
-GROUP BY node_id, source_port, rounded_timestamp)
-UNION
-(SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, destination_port AS port, sum(size) AS bytes_transferred
-FROM packets, flows, updates, sessions, anonymization_contexts, ip_addresses, local_addresses
-WHERE packets.flow_id = flows.id
-AND flows.update_id = updates.id
-AND updates.session_id = sessions.id
-AND sessions.anonymization_context_id = anonymization_contexts.id
-AND flows.source_ip_id = ip_addresses.id
-AND local_addresses.ip_address_id = ip_addresses.id
-GROUP BY node_id, destination_port, rounded_timestamp)) AS joined
-GROUP BY node_id, port, rounded_timestamp;
-SELECT create_matview('mv_bytes_per_port_per_minute', 'bytes_per_port_per_minute');
-
-CREATE OR REPLACE VIEW bytes_per_port_per_hour
-(node_id, timestamp, port, bytes_transferred) AS
-SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, port, sum(bytes_transferred)
-FROM mv_bytes_per_port_per_minute
-GROUP BY rounded_timestamp, node_id, port;
-
-CREATE OR REPLACE VIEW bytes_per_port_per_day
-(node_id, timestamp, port, bytes_transferred) AS
-SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, port, sum(bytes_transferred)
-FROM mv_bytes_per_port_per_minute
-GROUP BY rounded_timestamp, node_id, port;
-
-CREATE OR REPLACE VIEW bytes_per_port_total
-(node_id, port, bytes_transferred) AS
-SELECT node_id, port, sum(bytes_transferred)
-FROM mv_bytes_per_port_per_minute
-GROUP BY node_id, port;
