@@ -114,7 +114,7 @@ CREATE TABLE dns_cname_records (
 
 CREATE OR REPLACE VIEW bytes_per_minute
 (node_id, timestamp, bytes_transferred) AS
-SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, sum(size)
+SELECT node_id, date_trunc('minute', packets.timestamp) AS rounded_timestamp, sum(size)
 FROM packets, updates, sessions, anonymization_contexts, nodes
 WHERE packets.update_id = updates.id
 AND updates.session_id = sessions.id
@@ -212,7 +212,7 @@ AND updates.session_id = whitelisted_domains.session_id;
 
 CREATE OR REPLACE VIEW bytes_per_domain_per_minute
 (node_id, timestamp, domain, bytes_transferred) AS
-SELECT anonymization_contexts.node_id, date_trunc('minute', timestamp) AS rounded_timestamp, whitelisted_domain_flows.domain, sum(packets.size)
+SELECT anonymization_contexts.node_id, date_trunc('minute', packets.timestamp) AS rounded_timestamp, whitelisted_domain_flows.domain, sum(packets.size)
 FROM packets, whitelisted_domain_flows, updates, sessions, anonymization_contexts
 WHERE packets.flow_id = whitelisted_domain_flows.flow_id
 AND packets.update_id = updates.id
@@ -242,7 +242,7 @@ GROUP BY node_id, domain;
 CREATE OR REPLACE VIEW bytes_per_port_per_minute
 (node_id, timestamp, port, bytes_transferred) AS
 SELECT node_id, rounded_timestamp, port, sum(bytes_transferred) FROM
-((SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, source_port AS port, sum(size) AS bytes_transferred
+((SELECT node_id, date_trunc('minute', packets.timestamp) AS rounded_timestamp, source_port AS port, sum(size) AS bytes_transferred
 FROM packets, flows, updates, sessions, anonymization_contexts, ip_addresses, local_addresses
 WHERE packets.flow_id = flows.id
 AND flows.update_id = updates.id
@@ -252,7 +252,7 @@ AND flows.destination_ip_id = ip_addresses.id
 AND local_addresses.ip_address_id = ip_addresses.id
 GROUP BY node_id, source_port, rounded_timestamp)
 UNION
-(SELECT node_id, date_trunc('minute', timestamp) AS rounded_timestamp, destination_port AS port, sum(size) AS bytes_transferred
+(SELECT node_id, date_trunc('minute', packets.timestamp) AS rounded_timestamp, destination_port AS port, sum(size) AS bytes_transferred
 FROM packets, flows, updates, sessions, anonymization_contexts, ip_addresses, local_addresses
 WHERE packets.flow_id = flows.id
 AND flows.update_id = updates.id

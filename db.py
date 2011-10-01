@@ -14,62 +14,45 @@ class BismarkPassiveDatabase(object):
 
     def _execute_command(self, command, args):
         cur = self._conn.cursor()
-        cur.execute('SELECT %s;' % command, args)
+        cur.execute('SELECT %s(%s);' % (command, ','.join(['%s']*len(args))), args)
         result = cur.fetchone()[0]
         cur.close()
         return result
 
-    def _execute_commands(self, command, args):
-        cur = self._conn.cursor()
-        cur.executemany('SELECT %s;' % command, args)
-        cur.close()
-
     def _merge_node(self, *args):
-        return self._execute_command('merge_node (%s)', args)
+        return self._execute_command('merge_node', args)
     def _merge_whitelisted_domain(self, *args):
-        return self._execute_command('merge_whitelisted_domain (%s, %s)', args)
+        return self._execute_command('merge_whitelisted_domain', args)
     def _merge_anonymization_context(self, *args):
-        return self._execute_command(
-                'merge_anonymization_context (%s, %s)', args)
+        return self._execute_command('merge_anonymization_context', args)
     def _merge_session(self, *args):
-        return self._execute_command('merge_session (%s, %s)', args)
+        return self._execute_command('merge_session', args)
     def _merge_update(self, *args):
-        return self._execute_command(
-                'merge_update (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-                args)
+        return self._execute_command('merge_update', args)
     def _merge_mac_address(self, *args):
-        return self._execute_command('merge_mac_address (%s, %s)', args)
+        return self._execute_command('merge_mac_address', args)
     def _merge_ip_address(self, *args):
-        return self._execute_command('merge_ip_address (%s, %s)', args)
+        return self._execute_command('merge_ip_address', args)
     def _merge_domain_name(self, *args):
-        return self._execute_command('merge_domain_name (%s, %s)', args)
+        return self._execute_command('merge_domain_name', args)
     def _merge_local_address(self, *args):
-        return self._execute_command(
-                'merge_local_address (%s, %s, %s, %s)', args)
+        return self._execute_command('merge_local_address', args)
     def _merge_dns_a_record(self, *args):
-        return self._execute_command(
-                'merge_dns_a_record (%s, %s, %s, %s, %s)', args)
+        return self._execute_command('merge_dns_a_record', args)
     def _merge_dns_cname_record(self, *args):
-        return self._execute_command(
-                'merge_dns_cname_record (%s, %s, %s, %s, interval %s)', args)
+        return self._execute_command('merge_dns_cname_record', args)
     def _merge_flow(self, *args):
-        return self._execute_command(
-                'merge_flow (%s, %s, %s, %s, %s, %s, %s)', args)
+        return self._execute_command('merge_flow', args)
     def _merge_packet(self, *args):
-        return self._execute_command(
-                'merge_packet (%s, %s, %s, %s)', args)
-    def _merge_packets(self, args):
-        return self._execute_commands(
-                'merge_packet (%s, %s, %s, %s)', args)
+        return self._execute_command('merge_packet', args)
     def _lookup_local_address_for_session(self, *args):
-        return self._execute_command(
-                'lookup_local_address_for_session (%s, %s)', args)
+        return self._execute_command('lookup_local_address_for_session', args)
     def _lookup_flow_for_session(self, *args):
-        return self._execute_command('lookup_flow_for_session (%s, %s)', args)
+        return self._execute_command('lookup_flow_for_session', args)
     def _check_out_of_order(self, *args):
-        return self._execute_command('count_out_of_order (%s, %s)', args)
+        return self._execute_command('count_out_of_order', args)
     def _compute_histograms(self, *args):
-        return self._execute_command('compute_histograms ()', args)
+        return self._execute_command('compute_histograms', args)
 
     def import_update(self, parsed_update):
         node_id = self._merge_node(parsed_update.bismark_id)

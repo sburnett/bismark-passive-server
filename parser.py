@@ -47,7 +47,7 @@ class PassiveUpdate(object):
         self.bismark_id = intro_ids[0]
         self.creation_time = int(intro_ids[1])
         self.sequence_number = int(intro_ids[2])
-        self.timestamp = datetime.datetime.utcfromtimestamp(intro_ids[3])
+        self.timestamp = datetime.datetime.utcfromtimestamp(int(intro_ids[3]))
         if len(sections['intro']) >= 2:
             intro_stats = [ int(w) for w in sections['intro'][1].split() ]
             self.pcap_received = intro_stats[0]
