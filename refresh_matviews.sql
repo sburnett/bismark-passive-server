@@ -1,3 +1,5 @@
+SET search_path TO bismark_passive;
+
 SELECT refresh_matview('mv_bytes_per_minute');
 SELECT refresh_matview('mv_unanonymized_domain_names');
 SELECT refresh_matview('mv_first_packet_in_flow');

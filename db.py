@@ -8,7 +8,7 @@ class BismarkPassiveDatabase(object):
     def __init__(self, user, database):
         self._conn = psycopg2.connect(user=user, database=database)
         cur = self._conn.cursor()
-        cur.execute('SET search_path TO passive')
+        cur.execute('SET search_path TO bismark_passive')
         cur.close()
         self._conn.commit()
 

@@ -1,5 +1,4 @@
-CREATE SCHEMA passive;
-SET search_path TO passive;
+SET search_path TO bismark_passive;
 
 \i materialized_views.sql
 
@@ -146,7 +145,7 @@ FROM domain_names, anonymization_contexts
 WHERE domain_names.anonymization_context_id = anonymization_contexts.id
 AND anonymization_contexts.signature = '';
 SELECT create_matview('mv_unanonymized_domain_names', 'unanonymized_domain_names');
-CREATE INDEX ON mv_unanonymized_domain_names (id);
+CREATE INDEX mv_unanonymized_domain_names_id_idx ON mv_unanonymized_domain_names (id);
 
 CREATE OR REPLACE VIEW first_packet_in_flow
 (flow_id, packet_id, timestamp) AS
@@ -154,7 +153,7 @@ SELECT DISTINCT ON (flow_id) flow_id, id, timestamp
 FROM packets
 ORDER BY flow_id, timestamp;
 SELECT create_matview('mv_first_packet_in_flow', 'first_packet_in_flow');
-CREATE INDEX ON mv_first_packet_in_flow (flow_id, timestamp);
+CREATE INDEX mv_first_packet_in_flow_flowid_timestamp_idx ON mv_first_packet_in_flow (flow_id, timestamp);
 
 CREATE OR REPLACE VIEW time_window_for_dns_a_records
 (id, start_timestamp, end_timestamp) AS
@@ -163,7 +162,7 @@ FROM dns_a_records, packets, mv_unanonymized_domain_names
 WHERE packet_id = packets.id
 AND dns_a_records.domain_name_id = mv_unanonymized_domain_names.id;
 SELECT create_matview('mv_time_window_for_dns_a_records', 'time_window_for_dns_a_records');
-CREATE INDEX ON mv_time_window_for_dns_a_records (id, start_timestamp, end_timestamp);
+CREATE INDEX mv_time_window_for_dns_a_records_id_starttimestamp_endtimestamp_idx ON mv_time_window_for_dns_a_records (id, start_timestamp, end_timestamp);
 
 CREATE OR REPLACE VIEW time_window_for_dns_cname_records
 (id, start_timestamp, end_timestamp) AS
@@ -172,7 +171,7 @@ FROM dns_cname_records, packets, mv_unanonymized_domain_names
 WHERE packet_id = packets.id
 AND dns_cname_records.domain_name_id = mv_unanonymized_domain_names.id;
 SELECT create_matview('mv_time_window_for_dns_cname_records', 'time_window_for_dns_cname_records');
-CREATE INDEX ON mv_time_window_for_dns_cname_records (id, start_timestamp, end_timestamp);
+CREATE INDEX mv_time_window_for_dns_cname_records_id_startimestamp_endtimestamp_idx ON mv_time_window_for_dns_cname_records (id, start_timestamp, end_timestamp);
 
 CREATE OR REPLACE VIEW domains_for_flow
 (flow_id, domain_name_id) AS
@@ -197,7 +196,7 @@ AND mv_first_packet_in_flow.timestamp >= mv_time_window_for_dns_cname_records.st
 AND mv_first_packet_in_flow.timestamp <= mv_time_window_for_dns_cname_records.end_timestamp + interval '10 seconds'
 AND dns_cname_records.domain_name_id = domain_names.id);
 SELECT create_matview('mv_domains_for_flow', 'domains_for_flow');
-CREATE INDEX ON mv_domains_for_flow (flow_id, domain_name_id);
+CREATE INDEX mv_domains_for_flow_flowid_domainnameid_idx ON mv_domains_for_flow (flow_id, domain_name_id);
 
 CREATE OR REPLACE VIEW whitelisted_domain_flows
 (flow_id, domain) AS
