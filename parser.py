@@ -43,13 +43,15 @@ class PassiveUpdate(object):
                 'address_table': sections[7]
                 }
 
-        intro_ids = sections['intro'][0].split()
+        self.file_format_version = int(sections['intro'][0])
+        self.build_id = sections['intro'][1]
+        intro_ids = sections['intro'][2].split()
         self.bismark_id = intro_ids[0]
         self.creation_time = int(intro_ids[1])
         self.sequence_number = int(intro_ids[2])
         self.timestamp = datetime.datetime.utcfromtimestamp(int(intro_ids[3]))
-        if len(sections['intro']) >= 2:
-            intro_stats = [ int(w) for w in sections['intro'][1].split() ]
+        if len(sections['intro']) >= 4:
+            intro_stats = [ int(w) for w in sections['intro'][3].split() ]
             self.pcap_received = intro_stats[0]
             self.pcap_dropped = intro_stats[1]
             self.iface_dropped = intro_stats[2]

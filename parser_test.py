@@ -1,5 +1,6 @@
 import parser
 
+import calendar
 import unittest
 
 def format_source(source):
@@ -7,7 +8,9 @@ def format_source(source):
 
 class TestParser(unittest.TestCase):
     def test_unanonymized_header(self):
-        source = """BISMARKID 1234567890 12
+        source = """9
+                    BUILDID
+                    BISMARKID 1234567890 12 98765
 
 
                     UNANONYMIZED
@@ -21,13 +24,18 @@ class TestParser(unittest.TestCase):
 
                     0 0"""
         update = parser.PassiveUpdate(format_source(source))
+        self.assertTrue(update.file_format_version == 9)
+        self.assertTrue(update.build_id == 'BUILDID')
         self.assertTrue(update.bismark_id == 'BISMARKID')
         self.assertTrue(update.creation_time == 1234567890)
         self.assertTrue(update.sequence_number == 12)
+        self.assertTrue(calendar.timegm(update.timestamp.timetuple()) == 98765)
         self.assertFalse(update.anonymized)
 
     def test_anonymized_header(self):
-        source = """BISMARKID 1234567890 12
+        source = """9
+                    BUILDID
+                    BISMARKID 1234567890 12 98765
 
 
                     KEY
@@ -41,14 +49,19 @@ class TestParser(unittest.TestCase):
 
                     0 0"""
         update = parser.PassiveUpdate(format_source(source))
+        self.assertTrue(update.file_format_version == 9)
+        self.assertTrue(update.build_id == 'BUILDID')
         self.assertTrue(update.bismark_id == 'BISMARKID')
         self.assertTrue(update.creation_time == 1234567890)
         self.assertTrue(update.sequence_number == 12)
+        self.assertTrue(calendar.timegm(update.timestamp.timetuple()) == 98765)
         self.assertTrue(update.anonymized)
         self.assertTrue(update.anonymization_signature == 'KEY')
 
     def test_header_stats(self):
-        source = """BISMARKID 0 0
+        source = """0
+                    BUILDID
+                    BISMARKID 0 0 0
                     12 21 43
 
 
@@ -69,7 +82,9 @@ class TestParser(unittest.TestCase):
         self.assertTrue(update.anonymized)
 
     def test_packet_series(self):
-        source = """BISMARKID 0 0
+        source = """0
+                    BUILDID
+                    BISMARKID 0 0 0
 
 
                     UNANONYMIZED
@@ -88,18 +103,20 @@ class TestParser(unittest.TestCase):
         update = parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.packet_series_dropped == 123)
         self.assertTrue(len(update.packet_series) == 3)
-        self.assertTrue(update.packet_series[0].timestamp == 100)
+        self.assertTrue(update.packet_series[0].timestamp.microsecond == 100)
         self.assertTrue(update.packet_series[0].size == 15)
         self.assertTrue(update.packet_series[0].flow_id == 1)
-        self.assertTrue(update.packet_series[1].timestamp == 110)
+        self.assertTrue(update.packet_series[1].timestamp.microsecond == 110)
         self.assertTrue(update.packet_series[1].size == 40)
         self.assertTrue(update.packet_series[1].flow_id == 1)
-        self.assertTrue(update.packet_series[2].timestamp == 115)
+        self.assertTrue(update.packet_series[2].timestamp.microsecond == 115)
         self.assertTrue(update.packet_series[2].size == 1024)
         self.assertTrue(update.packet_series[2].flow_id == 2)
 
     def test_flow_table(self):
-        source = """BISMARKID 0 0
+        source = """0
+                    BUILDID
+                    BISMARKID 0 0 0
 
 
                     UNANONYMIZED
@@ -136,7 +153,9 @@ class TestParser(unittest.TestCase):
         self.assertTrue(update.flow_table[1].destination_port == 31)
 
     def test_dns_table(self):
-        source = """BISMARKID 0 0
+        source = """0
+                    BUILDID
+                    BISMARKID 0 0 0
 
 
                     UNANONYMIZED
@@ -146,37 +165,47 @@ class TestParser(unittest.TestCase):
                     0 0 0 0
 
                     5 6
-                    12 0 foo.com 123cd
-                    34 1 bar.org ae321
+                    9 12 0 foo.com 123cd 2
+                    8 34 1 bar.org ae321 34
 
-                    45 1 blah.cn blorg.us
-                    56 0 gorp.com boink.ca
+                    7 45 1 blah.cn blorg.us 93
+                    6 56 0 gorp.com boink.ca 28
 
                     0 0"""
         update = parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.dropped_a_records == 5)
         self.assertTrue(update.dropped_cname_records == 6)
         self.assertTrue(len(update.a_records) == 2)
+        self.assertTrue(update.a_records[0].packet_id == 9)
         self.assertTrue(update.a_records[0].address_id == 12)
         self.assertTrue(update.a_records[0].anonymized == 0)
         self.assertTrue(update.a_records[0].domain == 'foo.com')
         self.assertTrue(update.a_records[0].ip_address == '123cd')
+        self.assertTrue(update.a_records[0].ttl.seconds == 2)
+        self.assertTrue(update.a_records[1].packet_id == 8)
         self.assertTrue(update.a_records[1].address_id == 34)
         self.assertTrue(update.a_records[1].anonymized == 1)
         self.assertTrue(update.a_records[1].domain == 'bar.org')
         self.assertTrue(update.a_records[1].ip_address == 'ae321')
+        self.assertTrue(update.a_records[1].ttl.seconds == 34)
         self.assertTrue(len(update.cname_records) == 2)
+        self.assertTrue(update.cname_records[0].packet_id == 7)
         self.assertTrue(update.cname_records[0].address_id == 45)
         self.assertTrue(update.cname_records[0].anonymized == 1)
         self.assertTrue(update.cname_records[0].domain == 'blah.cn')
         self.assertTrue(update.cname_records[0].cname == 'blorg.us')
+        self.assertTrue(update.cname_records[0].ttl.seconds == 93)
+        self.assertTrue(update.cname_records[1].packet_id == 6)
         self.assertTrue(update.cname_records[1].address_id == 56)
         self.assertTrue(update.cname_records[1].anonymized == 0)
         self.assertTrue(update.cname_records[1].domain == 'gorp.com')
         self.assertTrue(update.cname_records[1].cname == 'boink.ca')
+        self.assertTrue(update.cname_records[1].ttl.seconds == 28)
 
     def test_address_table(self):
-        source = """BISMARKID 0 0
+        source = """0
+                    BUILDID
+                    BISMARKID 0 0 0
 
 
                     UNANONYMIZED
@@ -202,7 +231,9 @@ class TestParser(unittest.TestCase):
         self.assertTrue(update.addresses[1].ip_address == 'ba4321')
 
     def test_whitelist(self):
-        source = """BISMARKID 1234567890 12
+        source = """0
+                    BUILDID
+                    BISMARKID 1234567890 12 0
 
                     foo.com
                     bar.org
