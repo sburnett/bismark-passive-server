@@ -23,9 +23,9 @@ def parse_args():
                   'archive_directory': args[2] }
     return options, mandatory
 
-def main():
-    (options, args) = parse_args()
-    filenames = sorted(glob.glob(os.path.join(args['updates_directory'], '*.tar')))
+def index_traces(updates_directory, index_directory, archive_directory):
+    sessions_indexed = set()
+    filenames = sorted(glob.glob(os.path.join(updates_directory, '*.tar')))
     for filename in filenames:
         print 'Processing', filename
         tarball = tarfile.open(filename)
@@ -42,10 +42,11 @@ def main():
                 signature = update.anonymization_signature
             else:
                 signature = 'unanonymized'
-            index_path = os.path.join(args['index_directory'],
+            index_path = os.path.join(index_directory,
                                       update.bismark_id,
                                       signature,
                                       str(update.creation_time))
+            sessions_indexed.add(index_path)
             try:
                 os.makedirs(index_path)
             except OSError as e:
@@ -55,7 +56,17 @@ def main():
                     raise
             tarball.extract(tarmember, index_path)
 
-        shutil.move(filename, args['archive_directory'])
+        shutil.move(filename, archive_directory)
+
+    return sessions_indexed
+
+def main():
+    (options, args) = parse_args()
+    indexed = index_traces(args['updates_directory'],
+                           args['index_directory'],
+                           args['archive_directory'])
+    for name in indexed:
+        print name
 
 if __name__ == '__main__':
     main()

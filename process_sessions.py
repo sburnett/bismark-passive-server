@@ -5,20 +5,16 @@ import gzip
 from optparse import OptionParser
 import os.path
 import re
+import pickle
 
+import index_traces
 import parser
 import db
 
-def process_session(filenames,
-                    bytes_per_minute=None,
-                    bytes_per_port_per_minute=None,
-                    bytes_per_domain_per_minute=None):
-    if bytes_per_minute is None:
-        bytes_per_minute = {}
-    if bytes_per_port_per_minute is None:
-        bytes_per_port_per_minute = {}
-    if bytes_per_domain_per_minute is None:
-        bytes_per_domain_per_minute = {}
+def process_session(filenames):
+    bytes_per_minute = {}
+    bytes_per_port_per_minute = {}
+    bytes_per_domain_per_minute = {}
 
     whitelist = set()
     address_map = {}
@@ -114,53 +110,70 @@ def process_session(filenames,
             bytes_per_port_per_minute,
             bytes_per_domain_per_minute)
 
-def process_node(nodedir):
-    bytes_per_minute = {}
-    bytes_per_port_per_minute = {}
-    bytes_per_domain_per_minute = {}
-
-    session_dirs = glob.glob(os.path.join(nodedir, '*', '*'))
-    session_dirs.sort(key=lambda f: os.path.basename(f))
+def process_sessions(session_dirs):
     for session_dir in session_dirs:
-        if not os.path.isdir(session_dir):
-            continue
-        files = glob.glob(os.path.join(session_dir, '*.gz'))
-        files.sort(key=lambda f: os.path.getmtime(f))
-        (total, per_port, per_domain) \
-                = process_session(files,
-                                  bytes_per_minute,
-                                  bytes_per_port_per_minute,
-                                  bytes_per_domain_per_minute)
-    return (bytes_per_minute,
-            bytes_per_port_per_minute,
-            bytes_per_domain_per_minute)
+        filenames = glob.glob(os.path.join(session_dir, '*.gz'))
+        filenames.sort(key=lambda f: os.path.getmtime(f))
+        stats = process_session(filenames)
 
-def process_index(directory):
-    stats = {}
+        handle = open(os.path.join(session_dir, 'results.pickle'), 'wb')
+        pickle.dump(stats, handle)
+        handle.close()
+
+def merge_timeseries(first, second):
+    for key, value in first.items():
+        second.setdefault(key, 0)
+        second[key] += value
+    return first
+
+def write_results_to_database(index_directory):
     bpdb = db.BismarkPassiveDatabase('sburnett', 'bismark_openwrt_live_v0_1')
-    for nodedir in glob.glob(os.path.join(directory, '*')):
+    for nodedir in glob.glob(os.path.join(index_directory, '*')):
         if not os.path.isdir(nodedir):
             continue
+
+        bytes_per_minute = {}
+        bytes_per_port_per_minute = {}
+        bytes_per_domain_per_minute = {}
+
+        session_dirs = glob.glob(os.path.join(nodedir, '*', '*'))
+        session_dirs.sort(key=lambda f: os.path.basename(f))
+        for session_dir in session_dirs:
+            if not os.path.isdir(session_dir):
+                continue
+            filename = os.path.join(session_dir, 'results.pickle')
+            if not os.path.exists(filename):
+                process_sessions([session_dir])
+            handle = open(filename, 'rb')
+            bpm, bpppm, bpdpm = pickle.load(handle)
+            merge_timeseries(bpm, bytes_per_minute)
+            merge_timeseries(bpppm, bytes_per_port_per_minute)
+            merge_timeseries(bpdpm, bytes_per_domain_per_minute)
+
         node_id = os.path.basename(nodedir)
-        stats = process_node(nodedir)
-        bpdb.import_statistics(node_id, *stats)
+        bpdb.import_statistics(node_id,
+                               bytes_per_minute,
+                               bytes_per_port_per_minute,
+                               bytes_per_domain_per_minute)
 
 def parse_args():
-    usage = 'usage: %prog [options] session_directory'
+    usage = 'usage: %prog [options] updates_directory index_directory archive_directory'
     parser = OptionParser(usage=usage)
     options, args = parser.parse_args()
-    if len(args) != 1:
+    if len(args) != 3:
         parser.error('Missing required option')
-    mandatory = { 'session_directory': args[0] }
+    mandatory = { 'updates_directory': args[0],
+                  'index_directory': args[1],
+                  'archive_directory': args[2] }
     return options, mandatory
 
 def main():
     (options, args) = parse_args()
-    filenames = glob.glob(os.path.join(args['session_directory'], '*.gz'))
-    filenames.sort(key=lambda f: os.path.getmtime(f))
-    (bytes_per_minute,
-            bytes_per_port_per_minute,
-            bytes_per_domain_per_minute) = process_session(filenames)
+    indexed = index_traces.index_traces(args['updates_directory'],
+                                        args['index_directory'],
+                                        args['archive_directory'])
+    process_sessions(indexed)
+    write_results_to_database(args['index_directory'])
 
 if __name__ == '__main__':
     main()
