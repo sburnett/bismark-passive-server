@@ -34,7 +34,7 @@ def plot_daily_traffic(conn, node):
     ax.xaxis.set_major_formatter(DateFormatter('%Y-%m-%d'))
     ax.xaxis.set_major_locator(DayLocator())
     fig.autofmt_xdate()
-    plt.savefig('daily_traffic.pdf')
+    plt.savefig('%s_daily_traffic.pdf' % node)
 
 def plot_hourly_traffic(conn, node):
     cur = conn.cursor()
@@ -56,7 +56,7 @@ def plot_hourly_traffic(conn, node):
     ax.xaxis.set_minor_locator(HourLocator())
     ax.xaxis.set_major_locator(DayLocator())
     fig.autofmt_xdate()
-    plt.savefig('hourly_traffic.pdf')
+    plt.savefig('%s_hourly_traffic.pdf' % node)
 
 def plot_minutely_traffic(conn, node):
     cur = conn.cursor()
@@ -78,7 +78,7 @@ def plot_minutely_traffic(conn, node):
     ax.xaxis.set_minor_locator(HourLocator())
     ax.xaxis.set_major_locator(DayLocator())
     fig.autofmt_xdate()
-    plt.savefig('minutely_traffic.pdf')
+    plt.savefig('%s_minutely_traffic.pdf' % node)
 
 def plot_hourly_traffic_ports(conn, node):
     cur = conn.cursor()
@@ -120,7 +120,7 @@ def plot_hourly_traffic_ports(conn, node):
     ax.xaxis.set_minor_locator(HourLocator())
     ax.xaxis.set_major_locator(DayLocator())
     fig.autofmt_xdate()
-    plt.savefig('port_hourly_traffic.pdf')
+    plt.savefig('%s_port_hourly_traffic.pdf' % node)
 
 def plot_hourly_traffic_ports_no_http(conn, node):
     cur = conn.cursor()
@@ -165,4 +165,4 @@ def plot_hourly_traffic_ports_no_http(conn, node):
     ax.xaxis.set_minor_locator(HourLocator())
     ax.xaxis.set_major_locator(DayLocator())
     fig.autofmt_xdate()
-    plt.savefig('port_hourly_traffic_no_http.pdf')
+    plt.savefig('%s_port_hourly_traffic_no_http.pdf' % node)

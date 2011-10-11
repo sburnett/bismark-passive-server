@@ -4,7 +4,6 @@ from optparse import OptionParser
 import os.path
 import shutil
 import tarfile
-import tempfile
 
 import db
 import parser
@@ -12,6 +11,9 @@ import parser
 def parse_args():
     usage = 'usage: %prog [options] db_user db_name updates_directory archive_directory'
     parser = OptionParser(usage=usage)
+    parser.add_option('-n', '--fake', dest='fake',
+                      action='store_true', default=False,
+                      help="Don't actually import files")
     options, args = parser.parse_args()
     if len(args) != 4:
         parser.error('Missing required option')
@@ -28,26 +30,22 @@ def main():
     for filename in filenames:
         print 'Processing', filename
         tarball = tarfile.open(filename)
-        extract_dir = tempfile.mkdtemp(prefix='bismark-passive-')
-        tarball.extractall(extract_dir)
-        tarball.close()
+        tarmembers = tarball.getmembers()
+        tarmembers.sort(key=lambda m: m.mtime)
 
         updates = []
-        update_files = glob.glob(os.path.join(extract_dir, '*.gz'))
-        update_files.sort(key=lambda f: os.path.getmtime(f))
-        for update_file in update_files:
-            print '\t', update_file
-            update_handle = gzip.open(update_file, 'rb')
-            update_content = update_handle.read()
-            update_handle.close()
+        for tarmember in tarmembers:
+            print '\t', tarmember.name
+            tarhandle = tarball.extractfile(tarmember.name)
+            update_content = gzip.GzipFile(fileobj=tarhandle).read()
             updates.append(parser.PassiveUpdate(update_content))
 
-        shutil.rmtree(extract_dir)
-        shutil.move(filename, args['archive_directory'])
-
-        updates.sort(key=lambda u: (u.creation_time, u.sequence_number))
-        for update in updates:
-            database.import_update(update)
+        if not options.fake:
+            shutil.move(filename, args['archive_directory'])
+            updates.sort(key=lambda u: (u.creation_time, u.sequence_number))
+            for update in updates:
+                print 'Importing %d packets' % len(update.packet_series)
+                database.import_update(update)
 
 if __name__ == '__main__':
     main()

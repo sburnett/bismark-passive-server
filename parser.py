@@ -28,7 +28,7 @@ def parse_sections(lines):
     return sections
 
 class PassiveUpdate(object):
-    def __init__(self, contents):
+    def __init__(self, contents, onlyheaders=False):
         lines = contents.splitlines()
         sections = parse_sections(lines)
 
@@ -63,6 +63,9 @@ class PassiveUpdate(object):
         else:
             self.anonymized = True
             self.anonymization_signature = sections['anonymization'][0]
+
+        if onlyheaders:
+            return
 
         packet_stats = [ int(w) for w in sections['packet_series'][0].split() ]
         current_timestamp = packet_stats[0]
