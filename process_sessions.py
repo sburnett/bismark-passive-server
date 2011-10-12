@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from datetime import timedelta
 import glob
 import gzip
 from optparse import OptionParser
@@ -11,7 +12,7 @@ import index_traces
 import parser
 import db
 
-def process_session(filenames):
+def process_session_updates(updates):
     bytes_per_minute = {}
     bytes_per_port_per_minute = {}
     bytes_per_domain_per_minute = {}
@@ -22,10 +23,8 @@ def process_session(filenames):
     flow_ip_map = {}
     dns_map_ip = {}
     dns_a_map_domain = {}
-    for filename in filenames:
-        print filename
-        update_content = gzip.open(filename).read()
-        update = parser.PassiveUpdate(update_content)
+    for idx, update in enumerate(updates):
+        print 'Update', idx
 
         for domain in update.whitelist:
             whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))
@@ -55,15 +54,30 @@ def process_session(filenames):
             domain_key = (a_record.address_id, a_record.domain)
             dns_a_map_domain.setdefault(domain_key, [])
             dns_a_map_domain[domain_key].append(a_record)
+            try:
+                a_packet = update.packet_series[a_record.packet_id]
+            except IndexError:
+                continue
+            ttl_delta = timedelta(seconds=a_record.ttl)
             for domain, pattern in whitelist:
                 if pattern.search(a_record.domain) is not None:
                     ip_key = (a_record.address_id, a_record.ip_address)
+                    domain_record = (domain,
+                                     a_packet.timestamp,
+                                     a_packet.timestamp + ttl_delta)
                     dns_map_ip.setdefault(ip_key, set())
-                    dns_map_ip[ip_key].add(domain)
+                    dns_map_ip[ip_key].add(domain_record)
                     if ip_key in flow_ip_map:
-                        flow_ip_map[ip_key].add(domain)
+                        flow_ip_map[ip_key].add(domain_record)
 
         for cname_record in update.cname_records:
+            if cname_record.anonymized:
+                continue
+            try:
+                cname_packet = update.packet_series[cname_record.packet_id]
+            except IndexError:
+                continue
+            cname_ttl_delta = timedelta(seconds=cname_record.ttl)
             domain_key = (cname_record.address_id, cname_record.cname)
             a_records = dns_a_map_domain.get(domain_key)
             if a_records is None:
@@ -71,11 +85,24 @@ def process_session(filenames):
             for domain, pattern in whitelist:
                 if pattern.search(cname_record.domain) is not None:
                     for a_record in a_records:
+                        try:
+                            a_packet = update.packet_series[a_record.packet_id]
+                        except IndexError:
+                            continue
+                        a_ttl_delta = timedelta(seconds=a_record.ttl)
+                        start_timestamp = max(cname_packet.timestamp,
+                                              a_packet.timestamp)
+                        end_timestamp = min(
+                                cname_packet.timestamp + cname_ttl_delta,
+                                a_packet.timestamp + a_ttl_delta)
+                        if start_timestamp > end_timestamp:
+                            continue
                         ip_key = (a_record.address_id, a_record.ip_address)
+                        domain_record = (domain, start_timestamp, end_timestamp)
                         dns_map_ip.setdefault(ip_key, set())
-                        dns_map_ip[ip_key].add(domain)
+                        dns_map_ip[ip_key].add(domain_record)
                         if ip_key in flow_ip_map:
-                            flow_ip_map[ip_key].add(domain)
+                            flow_ip_map[ip_key].add(domain_record)
 
         for packet in update.packet_series:
             rounded_timestamp = packet.timestamp.replace(second=0, microsecond=0)
@@ -101,7 +128,10 @@ def process_session(filenames):
                         and not flow.source_ip_anonymized:
                     key = (address_map[flow.destination_ip], flow.source_ip)
                 if key is not None and key in flow_ip_map:
-                    for domain in flow_ip_map[key]:
+                    for domain, start_time, end_time in flow_ip_map[key]:
+                        if packet.timestamp < start_time \
+                                or packet.timestamp > end_time:
+                            continue
                         domain_key = (rounded_timestamp, domain)
                         bytes_per_domain_per_minute.setdefault(domain_key, 0)
                         bytes_per_domain_per_minute[domain_key] += packet.size
@@ -109,6 +139,14 @@ def process_session(filenames):
     return (bytes_per_minute,
             bytes_per_port_per_minute,
             bytes_per_domain_per_minute)
+
+def process_session(filenames):
+    updates = []
+    for filename in filenames:
+        print filename
+        update_content = gzip.open(filename).read()
+        updates.append(parser.PassiveUpdate(update_content))
+    return process_session_updates(updates)
 
 def process_sessions(session_dirs):
     for session_dir in session_dirs:
