@@ -1,6 +1,6 @@
 from process_sessions import process_session_updates
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import parser
 import unittest
 
@@ -174,20 +174,20 @@ class TestProcessSessions(unittest.TestCase):
                                        anonymized=0,
                                        domain='www.foo.com',
                                        ip_address=23,
-                                       ttl=600),
+                                       ttl=timedelta(minutes=10)),
                       parser.DnsAEntry(packet_id=0,
                                        address_id=1,
                                        anonymized=0,
                                        domain='www.bar.org',
                                        ip_address=32,
-                                       ttl=600),
+                                       ttl=timedelta(minutes=10))
                       ]
         cname_entries = [ parser.DnsCnameEntry(packet_id=0,
                                                address_id=0,
                                                anonymized=0,
                                                domain='www.gorp.net',
                                                cname='www.foo.com',
-                                               ttl=600) ]
+                                               ttl=timedelta(minutes=10)) ]
         addresses = [ parser.AddressEntry(ip_address=1, mac_address=-1),
                       parser.AddressEntry(ip_address=2, mac_address=-1) ]
 
@@ -250,26 +250,26 @@ class TestProcessSessions(unittest.TestCase):
                                        anonymized=0,
                                        domain='www.foo.com',
                                        ip_address=23,
-                                       ttl=10),
+                                       ttl=timedelta(seconds=10)),
                       parser.DnsAEntry(packet_id=0,
                                        address_id=1,
                                        anonymized=0,
                                        domain='www.bar.org',
                                        ip_address=32,
-                                       ttl=10),
+                                       ttl=timedelta(seconds=10)),
                       ]
         cname_entries = [ parser.DnsCnameEntry(packet_id=0,
                                                address_id=0,
                                                anonymized=0,
                                                domain='www.gorp.net',
                                                cname='www.foo.com',
-                                               ttl=10),
+                                               ttl=timedelta(seconds=10)),
                           parser.DnsCnameEntry(packet_id=0,
                                                address_id=1,
                                                anonymized=1,
                                                domain='www.gorp.net',
                                                cname='www.bar.org',
-                                               ttl=10)
+                                               ttl=timedelta(seconds=10)),
                                                ]
         addresses = [ parser.AddressEntry(ip_address=1, mac_address=-1),
                       parser.AddressEntry(ip_address=2, mac_address=-1) ]
@@ -322,20 +322,20 @@ class TestProcessSessions(unittest.TestCase):
                                        anonymized=0,
                                        domain='www.foo.com',
                                        ip_address=23,
-                                       ttl=5),
+                                       ttl=timedelta(seconds=5)),
                       ]
         cname_entries = [ parser.DnsCnameEntry(packet_id=0,
                                                address_id=0,
                                                anonymized=0,
                                                domain='www.gorp.net',
                                                cname='www.foo.com',
-                                               ttl=600),
+                                               ttl=timedelta(minutes=10)),
                           parser.DnsCnameEntry(packet_id=0,
                                                address_id=0,
                                                anonymized=0,
                                                domain='www.bar.org',
                                                cname='www.foo.com',
-                                               ttl=4) ]
+                                               ttl=timedelta(seconds=4)) ]
         addresses = [ parser.AddressEntry(ip_address=1, mac_address=-1) ]
 
         update = MockPassiveUpdate(packets,

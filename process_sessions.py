@@ -59,13 +59,12 @@ def process_session_updates(updates, silent=False):
                 a_packet = update.packet_series[a_record.packet_id]
             except IndexError:
                 continue
-            ttl_delta = timedelta(seconds=a_record.ttl)
             for domain, pattern in whitelist:
                 if pattern.search(a_record.domain) is not None:
                     ip_key = (a_record.address_id, a_record.ip_address)
                     domain_record = (domain,
                                      a_packet.timestamp,
-                                     a_packet.timestamp + ttl_delta)
+                                     a_packet.timestamp + a_record.ttl)
                     dns_map_ip.setdefault(ip_key, set())
                     dns_map_ip[ip_key].add(domain_record)
                     if ip_key in flow_ip_map:
@@ -78,7 +77,6 @@ def process_session_updates(updates, silent=False):
                 cname_packet = update.packet_series[cname_record.packet_id]
             except IndexError:
                 continue
-            cname_ttl_delta = timedelta(seconds=cname_record.ttl)
             domain_key = (cname_record.address_id, cname_record.cname)
             a_records = dns_a_map_domain.get(domain_key)
             if a_records is None:
@@ -90,12 +88,11 @@ def process_session_updates(updates, silent=False):
                             a_packet = update.packet_series[a_record.packet_id]
                         except IndexError:
                             continue
-                        a_ttl_delta = timedelta(seconds=a_record.ttl)
                         start_timestamp = max(cname_packet.timestamp,
                                               a_packet.timestamp)
                         end_timestamp = min(
-                                cname_packet.timestamp + cname_ttl_delta,
-                                a_packet.timestamp + a_ttl_delta)
+                                cname_packet.timestamp + cname_record.ttl,
+                                a_packet.timestamp + a_record.ttl)
                         if start_timestamp > end_timestamp:
                             continue
                         ip_key = (a_record.address_id, a_record.ip_address)
