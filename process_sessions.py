@@ -12,7 +12,7 @@ import index_traces
 import parser
 import db
 
-def process_session_updates(updates):
+def process_session_updates(updates, silent=False):
     bytes_per_minute = {}
     bytes_per_port_per_minute = {}
     bytes_per_domain_per_minute = {}
@@ -24,7 +24,8 @@ def process_session_updates(updates):
     dns_map_ip = {}
     dns_a_map_domain = {}
     for idx, update in enumerate(updates):
-        print 'Update', idx
+        if not silent:
+            print 'Update', idx
 
         for domain in update.whitelist:
             whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))

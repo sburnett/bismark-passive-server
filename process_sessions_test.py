@@ -50,7 +50,7 @@ class TestProcessSessions(unittest.TestCase):
                                        size=2,
                                        flow_id=-2) ]
         update = MockPassiveUpdate(packets)
-        results = process_session_updates([update])
+        results = process_session_updates([update], True)
 
         self.assertTrue(results[0][datetime(1970, 1, 1)] == 35)
         self.assertTrue(len(results[0]) == 1)
@@ -69,7 +69,7 @@ class TestProcessSessions(unittest.TestCase):
                                        size=2,
                                        flow_id=-3) ]
         update = MockPassiveUpdate(packets)
-        results = process_session_updates([update])
+        results = process_session_updates([update], True)
 
         self.assertTrue(results[0][datetime(1970, 1, 1, 0, 0)] == 10)
         self.assertTrue(results[0][datetime(1970, 1, 1, 0, 2)] == 25)
@@ -112,7 +112,7 @@ class TestProcessSessions(unittest.TestCase):
         addresses = [ parser.AddressEntry(ip_address=1, mac_address=0) ]
 
         update = MockPassiveUpdate(packets, flows, addresses)
-        results = process_session_updates([update])
+        results = process_session_updates([update], True)
 
         self.assertTrue(results[1][datetime(1970, 1, 1), 1] == 33)
         self.assertTrue(results[1][datetime(1970, 1, 1), 3] == 2)
@@ -197,7 +197,7 @@ class TestProcessSessions(unittest.TestCase):
                                    whitelist,
                                    a_entries,
                                    cname_entries)
-        results = process_session_updates([update])
+        results = process_session_updates([update], True)
 
         self.assertTrue(results[2][datetime(1970, 1, 1), 'foo.com'] == 2)
         self.assertTrue(results[2][datetime(1970, 1, 1), 'bar.org'] == 10)
@@ -280,7 +280,7 @@ class TestProcessSessions(unittest.TestCase):
                                    whitelist,
                                    a_entries,
                                    cname_entries)
-        results = process_session_updates([update])
+        results = process_session_updates([update], True)
 
         self.assertTrue(results[2][datetime(1970, 1, 1), 'bar.org'] == 10)
         self.assertTrue(len(results[2]) == 1)
@@ -344,7 +344,7 @@ class TestProcessSessions(unittest.TestCase):
                                    whitelist,
                                    a_entries,
                                    cname_entries)
-        results = process_session_updates([update])
+        results = process_session_updates([update], True)
 
         self.assertTrue(results[2][datetime(1970, 1, 1), 'foo.com'] == 6)
         self.assertTrue(results[2][datetime(1970, 1, 1), 'gorp.net'] == 6)
