@@ -1,4 +1,4 @@
-from process_sessions import process_session_updates
+from process_sessions import process_session_updates, merge_timeseries
 
 from datetime import datetime, timedelta
 import parser
@@ -353,6 +353,14 @@ class TestProcessSessions(unittest.TestCase):
 
     def test_bytes_domain_across_updates(self):
         pass
+
+class MergeTimeseriesTest(unittest.TestCase):
+    def test_merge(self):
+        first = { 1: 1, 2: 2 }
+        second = { 1: 4, 3: 8 }
+        result = { 1: 5, 2: 2, 3: 8 }
+        merge_timeseries(first, second)
+        self.assertTrue(second == result)
 
 if __name__ == '__main__':
     unittest.main()

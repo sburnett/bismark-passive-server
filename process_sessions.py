@@ -160,7 +160,6 @@ def merge_timeseries(first, second):
     for key, value in first.items():
         second.setdefault(key, 0)
         second[key] += value
-    return first
 
 def write_results_to_database(index_directory):
     bpdb = db.BismarkPassiveDatabase('sburnett', 'bismark_openwrt_live_v0_1')
