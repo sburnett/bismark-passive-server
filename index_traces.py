@@ -24,7 +24,6 @@ def parse_args():
     return options, mandatory
 
 def index_traces(updates_directory, index_directory, archive_directory):
-    sessions_indexed = set()
     filenames = sorted(glob.glob(os.path.join(updates_directory, '*.tar')))
     for filename in filenames:
         print 'Processing', filename
@@ -46,7 +45,6 @@ def index_traces(updates_directory, index_directory, archive_directory):
                                       update.bismark_id,
                                       signature,
                                       str(update.creation_time))
-            sessions_indexed.add(index_path)
             try:
                 os.makedirs(index_path)
             except OSError as e:
@@ -57,8 +55,6 @@ def index_traces(updates_directory, index_directory, archive_directory):
             tarball.extract(tarmember, index_path)
 
         shutil.move(filename, archive_directory)
-
-    return sessions_indexed
 
 def main():
     (options, args) = parse_args()

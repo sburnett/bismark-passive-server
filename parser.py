@@ -1,19 +1,19 @@
 import datetime
 from collections import namedtuple
 
-PacketEntry = namedtuple('PacketSeries', ['timestamp', 'size', 'flow_id'])
-FlowEntry = namedtuple('FlowTable',
+PacketEntry = namedtuple('PacketEntry', ['timestamp', 'size', 'flow_id'])
+FlowEntry = namedtuple('FlowEntry',
                        ['flow_id', 'source_ip_anonymized', 'source_ip',
                            'destination_ip_anonymized', 'destination_ip',
                            'transport_protocol',
                            'source_port', 'destination_port'])
-DnsAEntry = namedtuple('DnsTableA',
+DnsAEntry = namedtuple('DnsAEntry',
                        ['packet_id', 'address_id', 'anonymized',
                            'domain', 'ip_address', 'ttl'])
-DnsCnameEntry = namedtuple('DnsCnameTable',
+DnsCnameEntry = namedtuple('DnsCnameEntry',
                            ['packet_id', 'address_id', 'anonymized',
                                'domain', 'cname', 'ttl'])
-AddressEntry = namedtuple('AddressTable', ['mac_address', 'ip_address'])
+AddressEntry = namedtuple('AddressEntry', ['mac_address', 'ip_address'])
 
 def parse_sections(lines):
     sections = [[]]
