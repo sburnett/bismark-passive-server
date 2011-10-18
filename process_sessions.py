@@ -217,7 +217,7 @@ def process_session(session_dir):
     except:
         processor = SessionProcessor()
     if processor.process_session(session_dir):
-        cPickle.dump(processor, open(pickle_path, 'wb'))
+        cPickle.dump(processor, open(pickle_path, 'wb'), 2)
         return processor, True
     else:
         return processor, False
