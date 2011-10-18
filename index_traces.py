@@ -13,7 +13,8 @@ import tarfile
 import parser
 
 def parse_args():
-    usage = 'usage: %prog [options] updates_directory index_directory archive_directory'
+    usage = 'usage: %prog [options] ' \
+                + 'updates_directory index_directory archive_directory'
     parser = OptionParser(usage=usage)
     options, args = parser.parse_args()
     if len(args) != 3:
@@ -48,9 +49,7 @@ def index_traces(updates_directory, index_directory, archive_directory):
             try:
                 os.makedirs(index_path)
             except OSError as e:
-                if e.errno == errno.EEXIST:
-                    pass
-                else:
+                if e.errno != errno.EEXIST:
                     raise
             tarball.extract(tarmember, index_path)
 

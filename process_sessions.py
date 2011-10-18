@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 from collections import namedtuple
-from datetime import timedelta
 import glob
 import gzip
 from optparse import OptionParser
@@ -15,6 +14,18 @@ import db
 
 pickle_filename = 'update_processor.pickle'
 
+UpdateStatistics = namedtuple('UpdateStatistics',
+                              ['pcap_dropped',
+                               'iface_dropped',
+                               'packet_series_dropped',
+                               'flow_table_dropped',
+                               'dropped_a_records',
+                               'dropped_cname_records',
+                               'packet_series_size',
+                               'flow_table_size',
+                               'a_records_size',
+                               'cname_records_size'])
+
 class SessionProcessor(object):
     def __init__(self):
         self._filenames_processed = set()
@@ -23,6 +34,7 @@ class SessionProcessor(object):
         self._bytes_per_minute = {}
         self._bytes_per_port_per_minute = {}
         self._bytes_per_domain_per_minute = {}
+        self._update_statistics = {}
 
         self._whitelist = set()
         self._address_map = {}
@@ -31,15 +43,12 @@ class SessionProcessor(object):
         self._dns_map_ip = {}
         self._dns_a_map_domain = {}
 
-    @property
-    def bytes_per_minute(self):
-        return self._bytes_per_minute
-    @property
-    def bytes_per_port_per_minute(self):
-        return self._bytes_per_port_per_minute
-    @property
-    def bytes_per_domain_per_minute(self):
-        return self._bytes_per_domain_per_minute
+    bytes_per_minute = property(lambda self: self._bytes_per_minute)
+    bytes_per_port_per_minute \
+            = property(lambda self: self._bytes_per_port_per_minute)
+    bytes_per_domain_per_minute \
+            = property(lambda self: self._bytes_per_domain_per_minute)
+    update_statistics = property(lambda self: self._update_statistics)
 
     def process_flow(self, flow):
         self._flows[flow.flow_id] = flow
@@ -137,10 +146,20 @@ class SessionProcessor(object):
                     self._bytes_per_domain_per_minute[domain_key] \
                             += packet.size
 
-    def process_update(self, update):
-        if update.sequence_number != self._last_sequence_number_processed + 1:
-            return False
+    def process_statistics(self, update):
+        self._update_statistics[update.timestamp] = UpdateStatistics(
+                pcap_dropped = update.pcap_dropped,
+                iface_dropped = update.iface_dropped,
+                packet_series_dropped = update.packet_series_dropped,
+                flow_table_dropped = update.flow_table_dropped,
+                dropped_a_records = update.dropped_a_records,
+                dropped_cname_records = update.dropped_cname_records,
+                packet_series_size = len(update.packet_series),
+                flow_table_size = update.flow_table_size,
+                a_records_size = len(update.a_records),
+                cname_records_size = len(update.cname_records))
 
+    def process_update(self, update):
         for domain in update.whitelist:
             self._whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))
 
@@ -165,8 +184,7 @@ class SessionProcessor(object):
         for packet in update.packet_series:
             self.process_packet(packet)
 
-        self._last_sequence_number_processed = update.sequence_number
-        return True
+        self.process_statistics(update)
 
     def process_session(self, session_dir):
         print session_dir
@@ -181,7 +199,10 @@ class SessionProcessor(object):
                 continue
             update_content = gzip.open(filename).read()
             update = parser.PassiveUpdate(update_content)
-            if self.process_update(update):
+            if update.sequence_number \
+                    == self._last_sequence_number_processed + 1:
+                self.process_update(update)
+                self._last_sequence_number_processed = update.sequence_number
                 print 'processed'
             else:
                 print 'skipped (sequence number)'
@@ -215,6 +236,7 @@ def write_results_to_database(index_directory, username, database):
         bytes_per_minute = {}
         bytes_per_port_per_minute = {}
         bytes_per_domain_per_minute = {}
+        update_statistics = {}
 
         need_to_import = False
         session_dirs = glob.glob(os.path.join(nodedir, '*', '*'))
@@ -230,13 +252,15 @@ def write_results_to_database(index_directory, username, database):
                              bytes_per_port_per_minute)
             merge_timeseries(processor.bytes_per_domain_per_minute,
                              bytes_per_domain_per_minute)
+            update_statistics.update(processor.update_statistics)
 
         if need_to_import:
             node_id = os.path.basename(nodedir)
             bpdb.import_statistics(node_id,
                                    bytes_per_minute,
                                    bytes_per_port_per_minute,
-                                   bytes_per_domain_per_minute)
+                                   bytes_per_domain_per_minute,
+                                   update_statistics)
 
 def parse_args():
     usage = 'usage: %prog [options]' \

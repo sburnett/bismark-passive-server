@@ -79,3 +79,21 @@ CREATE OR REPLACE VIEW bytes_per_domain_total
 SELECT node_id, domain, sum(bytes_transferred)
 FROM bytes_per_domain_per_minute
 GROUP BY node_id, domain;
+
+CREATE TABLE update_statistics (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
+    pcap_dropped integer NOT NULL,
+    iface_dropped integer NOT NULL,
+    packet_series_dropped integer NOT NULL,
+    flow_table_dropped integer NOT NULL,
+    dropped_a_records integer NOT NULL,
+    dropped_cname_records integer NOT NULL,
+    packet_series_size integer NOT NULL,
+    flow_table_size integer NOT NULL,
+    a_records_size integer NOT NULL,
+    cname_records_size integer NOT NULL,
+    UNIQUE (node_id, timestamp)
+);
+
