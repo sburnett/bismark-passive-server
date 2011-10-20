@@ -47,18 +47,22 @@ def parse_sections(lines):
 class PassiveUpdate(object):
     def __init__(self, contents, onlyheaders=False):
         lines = contents.splitlines()
-        sections = parse_sections(lines)
+        blocks = parse_sections(lines)
 
         sections = {
-                'intro': sections[0],
-                'whitelist': sections[1],
-                'anonymization': sections[2],
-                'packet_series': sections[3],
-                'flow_table': sections[4],
-                'dns_table_a': sections[5],
-                'dns_table_cname': sections[6],
-                'address_table': sections[7]
+                'intro': blocks[0],
+                'whitelist': blocks[1],
+                'anonymization': blocks[2],
+                'packet_series': blocks[3],
+                'flow_table': blocks[4],
+                'dns_table_a': blocks[5],
+                'dns_table_cname': blocks[6],
+                'address_table': blocks[7]
                 }
+        try:
+            sections['drop_statistics'] = blocks[8]
+        except IndexError:
+            pass
 
         self.file_format_version = int(sections['intro'][0])
         self.build_id = sections['intro'][1]
@@ -159,3 +163,9 @@ class PassiveUpdate(object):
                 mac_address = mac,
                 ip_address = ip,
                 ))
+
+        if 'drop_statistics' in sections:
+            self.dropped_packets = {}
+            for line in sections['drop_statistics']:
+                size, count = line.split()
+                self.dropped_packets[int(size)] = int(count)

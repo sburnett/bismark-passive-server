@@ -251,5 +251,30 @@ class TestParser(unittest.TestCase):
         update = parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.whitelist == ['foo.com', 'bar.org'])
 
+    def test_drop_statistics(self):
+        source = """0
+                    BUILDID
+                    BISMARKID 0 0 0
+
+
+                    UNANONYMIZED
+
+                    0 0
+
+                    0 0 0 0
+
+                    0 0
+
+
+                    0 0
+
+                    12 53
+                    1500 34
+                    """
+
+        update = parser.PassiveUpdate(format_source(source))
+        self.assertTrue(update.dropped_packets[12] == 53)
+        self.assertTrue(update.dropped_packets[1500] == 34)
+
 if __name__ == '__main__':
     unittest.main()
