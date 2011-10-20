@@ -12,18 +12,6 @@ import tarfile
 
 import parser
 
-def parse_args():
-    usage = 'usage: %prog [options] ' \
-                + 'updates_directory index_directory archive_directory'
-    parser = OptionParser(usage=usage)
-    options, args = parser.parse_args()
-    if len(args) != 3:
-        parser.error('Missing required option')
-    mandatory = { 'updates_directory': args[0],
-                  'index_directory': args[1],
-                  'archive_directory': args[2] }
-    return options, mandatory
-
 def index_traces(updates_directory, index_directory, archive_directory):
     filenames = sorted(glob.glob(os.path.join(updates_directory, '*.tar')))
     for filename in filenames:
@@ -55,13 +43,23 @@ def index_traces(updates_directory, index_directory, archive_directory):
 
         shutil.move(filename, archive_directory)
 
+def parse_args():
+    usage = 'usage: %prog [options]' \
+                + ' updates_directory index_directory archive_directory'
+    parser = OptionParser(usage=usage)
+    options, args = parser.parse_args()
+    if len(args) != 3:
+        parser.error('Missing required option')
+    mandatory = { 'updates_directory': args[0],
+                  'index_directory': args[1],
+                  'archive_directory': args[2] }
+    return options, mandatory
+
 def main():
     (options, args) = parse_args()
-    indexed = index_traces(args['updates_directory'],
-                           args['index_directory'],
-                           args['archive_directory'])
-    for name in indexed:
-        print name
+    index_traces(args['updates_directory'],
+                 args['index_directory'],
+                 args['archive_directory'])
 
 if __name__ == '__main__':
     main()

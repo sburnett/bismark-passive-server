@@ -8,12 +8,11 @@ class BismarkPassiveDatabase(object):
         cur.close()
         self._conn.commit()
 
-    def import_statistics(self,
-                          node_id,
-                          bytes_per_minute,
-                          bytes_per_port_per_minute,
-                          bytes_per_domain_per_minute,
-                          update_statistics):
+    def import_byte_statistics(self,
+                               node_id,
+                               bytes_per_minute,
+                               bytes_per_port_per_minute,
+                               bytes_per_domain_per_minute):
         cur = self._conn.cursor()
         cur.execute('DELETE FROM bytes_per_minute WHERE node_id = %s',
                     (node_id, ));
@@ -48,6 +47,12 @@ class BismarkPassiveDatabase(object):
                            VALUES (%s, %s, %s, %s)''',
                         bytes_per_domain_per_minute_args)
 
+        self._conn.commit()
+
+    def import_update_statistics(self,
+                                 node_id,
+                                 update_statistics):
+        cur = self._conn.cursor()
         cur.execute('DELETE FROM update_statistics WHERE node_id = %s',
                     (node_id, ))
         update_statistics_args = []
@@ -75,3 +80,4 @@ class BismarkPassiveDatabase(object):
                         update_statistics_args)
 
         self._conn.commit()
+
