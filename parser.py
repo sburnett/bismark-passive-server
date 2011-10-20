@@ -15,6 +15,23 @@ DnsCnameEntry = namedtuple('DnsCnameEntry',
                                'domain', 'cname', 'ttl'])
 AddressEntry = namedtuple('AddressEntry', ['mac_address', 'ip_address'])
 
+##############################################################################
+# IMPORTANT: These values must match the identifiers of the same names in
+# constants.h in the bismark-passive package! These reservations are only
+# valid for file formats 2 and greater.
+##############################################################################
+class ReservedFlowIndices(object):
+    FLOW_ID_ERROR = 0
+    FLOW_ID_AARP = 1
+    FLOW_ID_ARP = 2
+    FLOW_ID_AT = 3
+    FLOW_ID_IPV6 = 4
+    FLOW_ID_IPX = 5
+    FLOW_ID_REVARP = 6
+    FLOW_ID_FIRST_UNRESERVED = 7
+    FLOW_ID_LAST_UNRESERVED = 65535
+##############################################################################
+
 def parse_sections(lines):
     sections = [[]]
     section_counter = 0
@@ -75,7 +92,8 @@ class PassiveUpdate(object):
             offset, size, flow_id = [ int(w) for w in line.split() ]
             current_timestamp += offset
             self.packet_series.append(PacketEntry(
-                timestamp = datetime.datetime.utcfromtimestamp(current_timestamp / 1e6),
+                timestamp = datetime.datetime.utcfromtimestamp(
+                    current_timestamp / 1e6),
                 size = size,
                 flow_id = flow_id
                 ))
