@@ -5,7 +5,7 @@ import glob
 import gzip
 import os.path
 
-import parser
+import update_parser
 
 class SessionProcessor(object):
     """This class is instantiated once per bismark-passive client session.
@@ -42,7 +42,7 @@ class SessionProcessor(object):
                 print 'skipped (filename)'
                 continue
             update_content = gzip.open(filename).read()
-            update = parser.PassiveUpdate(update_content)
+            update = update_parser.PassiveUpdate(update_content)
             if update.sequence_number \
                     == self._last_sequence_number_processed + 1:
                 self.process_update(update)

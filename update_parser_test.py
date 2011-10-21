@@ -1,4 +1,4 @@
-import parser
+import update_parser
 
 import calendar
 import unittest
@@ -23,7 +23,7 @@ class TestParser(unittest.TestCase):
 
 
                     0 0"""
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.file_format_version == 9)
         self.assertTrue(update.build_id == 'BUILDID')
         self.assertTrue(update.bismark_id == 'BISMARKID')
@@ -48,7 +48,7 @@ class TestParser(unittest.TestCase):
 
 
                     0 0"""
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.file_format_version == 9)
         self.assertTrue(update.build_id == 'BUILDID')
         self.assertTrue(update.bismark_id == 'BISMARKID')
@@ -75,7 +75,7 @@ class TestParser(unittest.TestCase):
 
 
                     0 0"""
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.pcap_received == 12)
         self.assertTrue(update.pcap_dropped == 21)
         self.assertTrue(update.iface_dropped == 43)
@@ -100,7 +100,7 @@ class TestParser(unittest.TestCase):
 
 
                     0 0"""
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.packet_series_dropped == 123)
         self.assertTrue(len(update.packet_series) == 3)
         self.assertTrue(update.packet_series[0].timestamp.microsecond == 100)
@@ -131,7 +131,7 @@ class TestParser(unittest.TestCase):
 
 
                     0 0"""
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.flow_table_baseline == 100)
         self.assertTrue(update.flow_table_size == 500)
         self.assertTrue(update.flow_table_expired == 12)
@@ -172,7 +172,7 @@ class TestParser(unittest.TestCase):
                     6 56 0 gorp.com boink.ca 28
 
                     0 0"""
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.dropped_a_records == 5)
         self.assertTrue(update.dropped_cname_records == 6)
         self.assertTrue(len(update.a_records) == 2)
@@ -221,7 +221,7 @@ class TestParser(unittest.TestCase):
                     ABCDEF 1234ab
                     FEDCBA ba4321
                     """
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.address_table_first_id == 1)
         self.assertTrue(update.address_table_size == 2)
         self.assertTrue(len(update.addresses) == 2)
@@ -248,7 +248,7 @@ class TestParser(unittest.TestCase):
 
 
                     0 0"""
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.whitelist == ['foo.com', 'bar.org'])
 
     def test_drop_statistics(self):
@@ -272,7 +272,7 @@ class TestParser(unittest.TestCase):
                     1500 34
                     """
 
-        update = parser.PassiveUpdate(format_source(source))
+        update = update_parser.PassiveUpdate(format_source(source))
         self.assertTrue(update.dropped_packets[12] == 53)
         self.assertTrue(update.dropped_packets[1500] == 34)
 

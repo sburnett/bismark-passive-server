@@ -1,7 +1,7 @@
 from bytes_computation import BytesSessionProcessor
 
 from datetime import datetime, timedelta
-import parser
+import update_parser
 import unittest
 
 class MockPassiveUpdate(object):
@@ -42,15 +42,18 @@ class MockPassiveUpdate(object):
 class TestBytesSessionProcessor(unittest.TestCase):
     def test_bytes(self):
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
-        packets = [ parser.PacketEntry(timestamp=timestamp.replace(second=12),
-                                       size=10,
-                                       flow_id=-1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=23),
-                                       size=23,
-                                       flow_id=-2),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=59),
-                                       size=2,
-                                       flow_id=-2) ]
+        packets = [ update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=12),
+                        size=10,
+                        flow_id=-1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=23),
+                        size=23,
+                        flow_id=-2),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=59),
+                        size=2,
+                        flow_id=-2) ]
         update = MockPassiveUpdate(packets)
         processor = BytesSessionProcessor()
         processor.process_update(update)
@@ -61,17 +64,18 @@ class TestBytesSessionProcessor(unittest.TestCase):
 
     def test_bytes_minute(self):
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
-        packets = [ parser.PacketEntry(timestamp=timestamp.replace(second=12),
-                                       size=10,
-                                       flow_id=-1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=23,
-                                                                   minute=2),
-                                       size=23,
-                                       flow_id=-2),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=59,
-                                                                   minute=2),
-                                       size=2,
-                                       flow_id=-3) ]
+        packets = [ update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=12),
+                        size=10,
+                        flow_id=-1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=23, minute=2),
+                        size=23,
+                        flow_id=-2),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=59, minute=2),
+                        size=2,
+                        flow_id=-3) ]
         update = MockPassiveUpdate(packets)
         processor = BytesSessionProcessor()
         processor.process_update(update)
@@ -83,23 +87,27 @@ class TestBytesSessionProcessor(unittest.TestCase):
 
     def test_bytes_port_minute(self):
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
-        packets = [ parser.PacketEntry(timestamp=timestamp.replace(second=12),
-                                       size=10,
-                                       flow_id=1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=23),
-                                       size=23,
-                                       flow_id=1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=59),
-                                       size=2,
-                                       flow_id=2),
-                    parser.PacketEntry(timestamp=timestamp.replace(minute=4),
-                                       size=10,
-                                       flow_id=2),
-                    parser.PacketEntry(timestamp=timestamp.replace(minute=4,
-                                                                   second=1),
-                                       size=20,
-                                       flow_id=2) ]
-        flow_entry = parser.FlowEntry(flow_id=-1,
+        packets = [ update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=12),
+                        size=10,
+                        flow_id=1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=23),
+                        size=23,
+                        flow_id=1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=59),
+                        size=2,
+                        flow_id=2),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(minute=4),
+                        size=10,
+                        flow_id=2),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(minute=4, second=1),
+                        size=20,
+                        flow_id=2) ]
+        flow_entry = update_parser.FlowEntry(flow_id=-1,
                                       source_ip_anonymized=1,
                                       source_ip=0,
                                       destination_ip_anonymized=1,
@@ -115,7 +123,7 @@ class TestBytesSessionProcessor(unittest.TestCase):
                                       source_ip=1,
                                       destination_ip=0,
                                       destination_port=3) ]
-        addresses = [ parser.AddressEntry(ip_address=1, mac_address=0) ]
+        addresses = [ update_parser.AddressEntry(ip_address=1, mac_address=0) ]
 
         update = MockPassiveUpdate(packets, flows, addresses)
         processor = BytesSessionProcessor()
@@ -134,29 +142,36 @@ class TestBytesSessionProcessor(unittest.TestCase):
     def test_bytes_domain_minute(self):
         whitelist = [ 'foo.com', 'bar.org', 'gorp.net' ]
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
-        packets = [ parser.PacketEntry(timestamp=timestamp.replace(second=10),
-                                       size=10,
-                                       flow_id=-1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=11),
-                                       size=2,
-                                       flow_id=0),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=11),
-                                       size=10,
-                                       flow_id=1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=11),
-                                       size=21,
-                                       flow_id=2),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=11),
-                                       size=35,
-                                       flow_id=3),
-                    parser.PacketEntry(timestamp=timestamp.replace(minute=3),
-                                       size=37,
-                                       flow_id=0),
-                    parser.PacketEntry(timestamp=timestamp.replace(minute=3),
-                                       size=50,
-                                       flow_id=1),
+        packets = [ update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=10),
+                        size=10,
+                        flow_id=-1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=11),
+                        size=2,
+                        flow_id=0),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=11),
+                        size=10,
+                        flow_id=1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=11),
+                        size=21,
+                        flow_id=2),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=11),
+                        size=35,
+                        flow_id=3),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(minute=3),
+                        size=37,
+                        flow_id=0),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(minute=3),
+                        size=50,
+                        flow_id=1),
                     ]
-        flow_entry = parser.FlowEntry(flow_id=-1,
+        flow_entry = update_parser.FlowEntry(flow_id=-1,
                                       source_ip_anonymized=1,
                                       source_ip=0,
                                       destination_ip_anonymized=1,
@@ -181,27 +196,27 @@ class TestBytesSessionProcessor(unittest.TestCase):
                                       source_ip_anonymized=0,
                                       destination_ip=1),
                 ]
-        a_entries = [ parser.DnsAEntry(packet_id=0,
+        a_entries = [ update_parser.DnsAEntry(packet_id=0,
                                        address_id=0,
                                        anonymized=0,
                                        domain='www.foo.com',
                                        ip_address=23,
                                        ttl=timedelta(minutes=10)),
-                      parser.DnsAEntry(packet_id=0,
+                      update_parser.DnsAEntry(packet_id=0,
                                        address_id=1,
                                        anonymized=0,
                                        domain='www.bar.org',
                                        ip_address=32,
                                        ttl=timedelta(minutes=10))
                       ]
-        cname_entries = [ parser.DnsCnameEntry(packet_id=0,
+        cname_entries = [ update_parser.DnsCnameEntry(packet_id=0,
                                                address_id=0,
                                                anonymized=0,
                                                domain='www.gorp.net',
                                                cname='www.foo.com',
                                                ttl=timedelta(minutes=10)) ]
-        addresses = [ parser.AddressEntry(ip_address=1, mac_address=-1),
-                      parser.AddressEntry(ip_address=2, mac_address=-1) ]
+        addresses = [ update_parser.AddressEntry(ip_address=1, mac_address=-1),
+                      update_parser.AddressEntry(ip_address=2, mac_address=-1) ]
 
         update = MockPassiveUpdate(packets,
                                    flows,
@@ -237,20 +252,24 @@ class TestBytesSessionProcessor(unittest.TestCase):
     def test_bytes_domain_anonymized(self):
         whitelist = [ 'foo.com', 'bar.org', 'gorp.net' ]
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
-        packets = [ parser.PacketEntry(timestamp=timestamp.replace(second=10),
-                                       size=10,
-                                       flow_id=-1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=11),
-                                       size=2,
-                                       flow_id=0),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=11),
-                                       size=10,
-                                       flow_id=1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=11),
-                                       size=10,
-                                       flow_id=2),
+        packets = [ update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=10),
+                        size=10,
+                        flow_id=-1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=11),
+                        size=2,
+                        flow_id=0),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=11),
+                        size=10,
+                        flow_id=1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=11),
+                        size=10,
+                        flow_id=2),
                     ]
-        flow_entry = parser.FlowEntry(flow_id=-1,
+        flow_entry = update_parser.FlowEntry(flow_id=-1,
                                       source_ip_anonymized=1,
                                       source_ip=0,
                                       destination_ip_anonymized=1,
@@ -269,34 +288,35 @@ class TestBytesSessionProcessor(unittest.TestCase):
                                       source_ip_anonymized=0,
                                       destination_ip=2),
                 ]
-        a_entries = [ parser.DnsAEntry(packet_id=0,
+        a_entries = [ update_parser.DnsAEntry(packet_id=0,
                                        address_id=0,
                                        anonymized=0,
                                        domain='www.foo.com',
                                        ip_address=23,
                                        ttl=timedelta(seconds=10)),
-                      parser.DnsAEntry(packet_id=0,
+                      update_parser.DnsAEntry(packet_id=0,
                                        address_id=1,
                                        anonymized=0,
                                        domain='www.bar.org',
                                        ip_address=32,
                                        ttl=timedelta(seconds=10)),
                       ]
-        cname_entries = [ parser.DnsCnameEntry(packet_id=0,
+        cname_entries = [ update_parser.DnsCnameEntry(packet_id=0,
                                                address_id=0,
                                                anonymized=0,
                                                domain='www.gorp.net',
                                                cname='www.foo.com',
                                                ttl=timedelta(seconds=10)),
-                          parser.DnsCnameEntry(packet_id=0,
+                          update_parser.DnsCnameEntry(packet_id=0,
                                                address_id=1,
                                                anonymized=1,
                                                domain='www.gorp.net',
                                                cname='www.bar.org',
                                                ttl=timedelta(seconds=10)),
                                                ]
-        addresses = [ parser.AddressEntry(ip_address=1, mac_address=-1),
-                      parser.AddressEntry(ip_address=2, mac_address=-1) ]
+        addresses = [ update_parser.AddressEntry(ip_address=1, mac_address=-1),
+                      update_parser.AddressEntry(ip_address=2, mac_address=-1)
+                    ]
 
         update = MockPassiveUpdate(packets,
                                    flows,
@@ -317,23 +337,28 @@ class TestBytesSessionProcessor(unittest.TestCase):
     def test_bytes_domain_expire(self):
         whitelist = [ 'foo.com', 'bar.org', 'gorp.net' ]
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
-        packets = [ parser.PacketEntry(timestamp=timestamp.replace(second=10),
-                                       size=10,
-                                       flow_id=-1),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=9),
-                                       size=1,
-                                       flow_id=0),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=11),
-                                       size=2,
-                                       flow_id=0),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=15),
-                                       size=4,
-                                       flow_id=0),
-                    parser.PacketEntry(timestamp=timestamp.replace(second=16),
-                                       size=8,
-                                       flow_id=0),
+        packets = [ update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=10),
+                        size=10,
+                        flow_id=-1),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=9),
+                        size=1,
+                        flow_id=0),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=11),
+                        size=2,
+                        flow_id=0),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=15),
+                        size=4,
+                        flow_id=0),
+                    update_parser.PacketEntry(
+                        timestamp=timestamp.replace(second=16),
+                        size=8,
+                        flow_id=0),
                     ]
-        flow_entry = parser.FlowEntry(flow_id=-1,
+        flow_entry = update_parser.FlowEntry(flow_id=-1,
                                       source_ip_anonymized=1,
                                       source_ip=0,
                                       destination_ip_anonymized=1,
@@ -346,26 +371,27 @@ class TestBytesSessionProcessor(unittest.TestCase):
                                       destination_ip=23,
                                       destination_ip_anonymized=0),
                 ]
-        a_entries = [ parser.DnsAEntry(packet_id=0,
+        a_entries = [ update_parser.DnsAEntry(packet_id=0,
                                        address_id=0,
                                        anonymized=0,
                                        domain='www.foo.com',
                                        ip_address=23,
                                        ttl=timedelta(seconds=5)),
                       ]
-        cname_entries = [ parser.DnsCnameEntry(packet_id=0,
+        cname_entries = [ update_parser.DnsCnameEntry(packet_id=0,
                                                address_id=0,
                                                anonymized=0,
                                                domain='www.gorp.net',
                                                cname='www.foo.com',
                                                ttl=timedelta(minutes=10)),
-                          parser.DnsCnameEntry(packet_id=0,
+                          update_parser.DnsCnameEntry(packet_id=0,
                                                address_id=0,
                                                anonymized=0,
                                                domain='www.bar.org',
                                                cname='www.foo.com',
                                                ttl=timedelta(seconds=4)) ]
-        addresses = [ parser.AddressEntry(ip_address=1, mac_address=-1) ]
+        addresses = \
+                [ update_parser.AddressEntry(ip_address=1, mac_address=-1) ]
 
         update = MockPassiveUpdate(packets,
                                    flows,
