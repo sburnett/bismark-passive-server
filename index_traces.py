@@ -10,7 +10,7 @@ import os.path
 import shutil
 import tarfile
 
-import parser
+import update_parser
 
 def index_traces(updates_directory, index_directory, archive_directory):
     filenames = sorted(glob.glob(os.path.join(updates_directory, '*.tar')))
@@ -25,7 +25,8 @@ def index_traces(updates_directory, index_directory, archive_directory):
             print '\t', tarmember.name
             tarhandle = tarball.extractfile(tarmember.name)
             update_content = gzip.GzipFile(fileobj=tarhandle).read()
-            update = parser.PassiveUpdate(update_content, onlyheaders=True)
+            update = update_parser.PassiveUpdate(update_content,
+                                                 onlyheaders=True)
             if update.anonymized:
                 signature = update.anonymization_signature
             else:
@@ -46,10 +47,10 @@ def index_traces(updates_directory, index_directory, archive_directory):
 def parse_args():
     usage = 'usage: %prog [options]' \
                 + ' updates_directory index_directory archive_directory'
-    parser = OptionParser(usage=usage)
-    options, args = parser.parse_args()
+    update_parser = OptionParser(usage=usage)
+    options, args = update_parser.parse_args()
     if len(args) != 3:
-        parser.error('Missing required option')
+        update_parser.error('Missing required option')
     mandatory = { 'updates_directory': args[0],
                   'index_directory': args[1],
                   'archive_directory': args[2] }
