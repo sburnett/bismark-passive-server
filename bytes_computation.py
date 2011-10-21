@@ -30,6 +30,7 @@ class BytesSessionProcessor(SessionProcessor):
             key = (self._address_map[flow.destination_ip], flow.source_ip)
         else:
             return
+        self._flow_ip_map[key]
         if key in self._dns_map_ip:
             self._flow_ip_map[key].update(self._dns_map_ip[key])
 

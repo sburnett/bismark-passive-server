@@ -1,4 +1,4 @@
-from process_sessions import SessionProcessor, merge_timeseries
+from bytes_computation import BytesSessionProcessor
 
 from datetime import datetime, timedelta
 import parser
@@ -39,7 +39,7 @@ class MockPassiveUpdate(object):
             self.cname_records = cname_records
         self.sequence_number = sequence_number
 
-class TestProcessSessions(unittest.TestCase):
+class TestBytesSessionProcessor(unittest.TestCase):
     def test_bytes(self):
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
         packets = [ parser.PacketEntry(timestamp=timestamp.replace(second=12),
@@ -52,11 +52,12 @@ class TestProcessSessions(unittest.TestCase):
                                        size=2,
                                        flow_id=-2) ]
         update = MockPassiveUpdate(packets)
-        processor = SessionProcessor()
+        processor = BytesSessionProcessor()
         processor.process_update(update)
 
-        self.assertTrue(processor.bytes_per_minute[datetime(1970, 1, 1)] == 35)
-        self.assertTrue(len(processor.bytes_per_minute) == 1)
+        bytes_per_minute = processor.results['bytes_per_minute']
+        self.assertTrue(bytes_per_minute[datetime(1970, 1, 1)] == 35)
+        self.assertTrue(len(bytes_per_minute) == 1)
 
     def test_bytes_minute(self):
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
@@ -72,14 +73,13 @@ class TestProcessSessions(unittest.TestCase):
                                        size=2,
                                        flow_id=-3) ]
         update = MockPassiveUpdate(packets)
-        processor = SessionProcessor()
+        processor = BytesSessionProcessor()
         processor.process_update(update)
 
-        self.assertTrue(
-                processor.bytes_per_minute[datetime(1970, 1, 1, 0, 0)] == 10)
-        self.assertTrue(
-                processor.bytes_per_minute[datetime(1970, 1, 1, 0, 2)] == 25)
-        self.assertTrue(len(processor.bytes_per_minute) == 2)
+        bytes_per_minute = processor.results['bytes_per_minute']
+        self.assertTrue(bytes_per_minute[datetime(1970, 1, 1, 0, 0)] == 10)
+        self.assertTrue(bytes_per_minute[datetime(1970, 1, 1, 0, 2)] == 25)
+        self.assertTrue(len(bytes_per_minute) == 2)
 
     def test_bytes_port_minute(self):
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
@@ -118,19 +118,18 @@ class TestProcessSessions(unittest.TestCase):
         addresses = [ parser.AddressEntry(ip_address=1, mac_address=0) ]
 
         update = MockPassiveUpdate(packets, flows, addresses)
-        processor = SessionProcessor()
+        processor = BytesSessionProcessor()
         processor.process_update(update)
 
+        bytes_per_port_per_minute \
+                = processor.results['bytes_per_port_per_minute']
         self.assertTrue(
-                processor.bytes_per_port_per_minute[datetime(1970, 1, 1), 1] \
-                        == 33)
+                bytes_per_port_per_minute[datetime(1970, 1, 1), 1] == 33)
         self.assertTrue(
-                processor.bytes_per_port_per_minute[datetime(1970, 1, 1), 3] \
-                        == 2)
+                bytes_per_port_per_minute[datetime(1970, 1, 1), 3] == 2)
         self.assertTrue(
-                processor.bytes_per_port_per_minute[
-                    datetime(1970, 1, 1, 0, 4), 3] == 30)
-        self.assertTrue(len(processor.bytes_per_port_per_minute) == 3)
+                bytes_per_port_per_minute[datetime(1970, 1, 1, 0, 4), 3] == 30)
+        self.assertTrue(len(bytes_per_port_per_minute) == 3)
 
     def test_bytes_domain_minute(self):
         whitelist = [ 'foo.com', 'bar.org', 'gorp.net' ]
@@ -210,28 +209,30 @@ class TestProcessSessions(unittest.TestCase):
                                    whitelist,
                                    a_entries,
                                    cname_entries)
-        processor = SessionProcessor()
+        processor = BytesSessionProcessor()
         processor.process_update(update)
 
+        bytes_per_domain_per_minute \
+                = processor.results['bytes_per_domain_per_minute']
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'foo.com'] == 2)
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'bar.org'] == 10)
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'gorp.net'] == 2)
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1, 0, 3), 'foo.com'] == 37)
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1, 0, 3), 'gorp.net'] == 37)
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1, 0, 3), 'bar.org'] == 50)
-        self.assertTrue(len(processor.bytes_per_domain_per_minute) == 6)
+        self.assertTrue(len(bytes_per_domain_per_minute) == 6)
 
     def test_bytes_domain_anonymized(self):
         whitelist = [ 'foo.com', 'bar.org', 'gorp.net' ]
@@ -303,13 +304,15 @@ class TestProcessSessions(unittest.TestCase):
                                    whitelist,
                                    a_entries,
                                    cname_entries)
-        processor = SessionProcessor()
+        processor = BytesSessionProcessor()
         processor.process_update(update)
 
+        bytes_per_domain_per_minute \
+                = processor.results['bytes_per_domain_per_minute']
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'bar.org'] == 10)
-        self.assertTrue(len(processor.bytes_per_domain_per_minute) == 1)
+        self.assertTrue(len(bytes_per_domain_per_minute) == 1)
 
     def test_bytes_domain_expire(self):
         whitelist = [ 'foo.com', 'bar.org', 'gorp.net' ]
@@ -370,57 +373,21 @@ class TestProcessSessions(unittest.TestCase):
                                    whitelist,
                                    a_entries,
                                    cname_entries)
-        processor = SessionProcessor()
+        processor = BytesSessionProcessor()
         processor.process_update(update)
 
+        bytes_per_domain_per_minute \
+                = processor.results['bytes_per_domain_per_minute']
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'foo.com'] == 6)
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'gorp.net'] == 6)
         self.assertTrue(
-                processor.bytes_per_domain_per_minute[
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'bar.org'] == 2)
-        self.assertTrue(len(processor.bytes_per_domain_per_minute) == 3)
-
-    def test_out_of_order(self):
-        timestamp = datetime(1970, 1, 1, 0, 0, 0)
-        packets = [ parser.PacketEntry(timestamp=timestamp.replace(second=0),
-                                       size=100,
-                                       flow_id=-1) ]
-        update = MockPassiveUpdate(packets)
-        processor = SessionProcessor()
-
-        update.sequence_number = 1
-        processor.process_update(update)
-        self.assertFalse(timestamp in processor.bytes_per_minute)
-
-        update.sequence_number = 0
-        processor.process_update(update)
-        self.assertTrue(processor.bytes_per_minute[timestamp] == 100)
-
-        processor.process_update(update)
-        self.assertTrue(processor.bytes_per_minute[timestamp] == 100)
-
-        update.sequence_number = 1
-        processor.process_update(update)
-        self.assertTrue(processor.bytes_per_minute[timestamp] == 200)
-
-        update.sequence_number = 3
-        processor.process_update(update)
-        self.assertTrue(processor.bytes_per_minute[timestamp] == 200)
-
-    def test_bytes_domain_across_updates(self):
-        pass
-
-class MergeTimeseriesTest(unittest.TestCase):
-    def test_merge(self):
-        first = { 1: 1, 2: 2 }
-        second = { 1: 4, 3: 8 }
-        result = { 1: 5, 2: 2, 3: 8 }
-        merge_timeseries(first, second)
-        self.assertTrue(second == result)
+        self.assertTrue(len(bytes_per_domain_per_minute) == 3)
 
 if __name__ == '__main__':
     unittest.main()
