@@ -80,6 +80,33 @@ SELECT node_id, domain, sum(bytes_transferred)
 FROM bytes_per_domain_per_minute
 GROUP BY node_id, domain;
 
+CREATE TABLE bytes_per_device_per_minute (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
+    mac_address varchar NOT NULL,
+    bytes_transferred integer NOT NULL,
+    UNIQUE (node_id, mac_address, timestamp)
+);
+
+CREATE OR REPLACE VIEW bytes_per_device_per_hour
+(node_id, timestamp, mac_address, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, mac_address, sum(bytes_transferred)
+FROM bytes_per_device_per_minute
+GROUP BY rounded_timestamp, node_id, mac_address;
+
+CREATE OR REPLACE VIEW bytes_per_device_per_day
+(node_id, timestamp, mac_address, bytes_transferred) AS
+SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, mac_address, sum(bytes_transferred)
+FROM bytes_per_device_per_minute
+GROUP BY rounded_timestamp, node_id, mac_address;
+
+CREATE OR REPLACE VIEW bytes_per_device_total
+(node_id, mac_address, bytes_transferred) AS
+SELECT node_id, mac_address, sum(bytes_transferred)
+FROM bytes_per_device_per_minute
+GROUP BY node_id, mac_address;
+
 CREATE TABLE update_statistics (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,

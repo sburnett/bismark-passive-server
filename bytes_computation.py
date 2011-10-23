@@ -1,6 +1,8 @@
 from collections import defaultdict, namedtuple
 import re
 
+import pdb
+
 import db
 from session_computations import \
         SessionProcessor, SessionAggregator, merge_timeseries
@@ -12,9 +14,11 @@ class BytesSessionProcessor(SessionProcessor):
         self._bytes_per_minute = defaultdict(int)
         self._bytes_per_port_per_minute = defaultdict(int)
         self._bytes_per_domain_per_minute = defaultdict(int)
+        self._bytes_per_device_per_minute = defaultdict(int)
 
         self._whitelist = set()
         self._address_map = {}
+        self._mac_address_map = {}
         self._flows = {}
         self._flow_ip_map = defaultdict(set)
         self._dns_map_ip = defaultdict(set)
@@ -110,6 +114,16 @@ class BytesSessionProcessor(SessionProcessor):
                     self._bytes_per_domain_per_minute[domain_key] \
                             += packet.size
 
+            device_key = None
+            if flow.source_ip in self._mac_address_map:
+                device_key = (rounded_timestamp,
+                              self._mac_address_map[flow.source_ip])
+            elif flow.destination_ip in self._mac_address_map:
+                device_key = (rounded_timestamp,
+                              self._mac_address_map[flow.destination_ip])
+            if device_key is not None:
+                self._bytes_per_device_per_minute[device_key] += packet.size
+
     def process_update(self, update):
         for domain in update.whitelist:
             self._whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))
@@ -118,6 +132,7 @@ class BytesSessionProcessor(SessionProcessor):
             index = (update.address_table_first_id + offset) \
                     % update.address_table_size
             self._address_map[address.ip_address] = index
+            self._mac_address_map[address.ip_address] = address.mac_address
 
         for flow in update.flow_table:
             self.process_flow(flow)
@@ -140,13 +155,16 @@ class BytesSessionProcessor(SessionProcessor):
         return { 'bytes_per_minute': self._bytes_per_minute,
                  'bytes_per_port_per_minute': self._bytes_per_port_per_minute,
                  'bytes_per_domain_per_minute': \
-                         self._bytes_per_domain_per_minute }
+                         self._bytes_per_domain_per_minute,
+                 'bytes_per_device_per_minute': \
+                         self._bytes_per_device_per_minute }
 
 class BytesSessionAggregator(SessionAggregator):
     ResultsRecord = namedtuple('ResultsRecord',
                                ['bytes_per_minute',
                                 'bytes_per_port_per_minute',
-                                'bytes_per_domain_per_minute'])
+                                'bytes_per_domain_per_minute',
+                                'bytes_per_device_per_minute'])
 
     def __init__(self, username, database):
         super(BytesSessionAggregator, self).__init__()
@@ -158,7 +176,8 @@ class BytesSessionAggregator(SessionAggregator):
                 self.ResultsRecord(
                     bytes_per_minute=defaultdict(int),
                     bytes_per_port_per_minute=defaultdict(int),
-                    bytes_per_domain_per_minute=defaultdict(int)))
+                    bytes_per_domain_per_minute=defaultdict(int),
+                    bytes_per_device_per_minute=defaultdict(int)))
         self._nodes_updated = set()
 
     def augment_results(self,
@@ -173,6 +192,8 @@ class BytesSessionAggregator(SessionAggregator):
                          self._statistics[node_id].bytes_per_port_per_minute)
         merge_timeseries(results['bytes_per_domain_per_minute'],
                          self._statistics[node_id].bytes_per_domain_per_minute)
+        merge_timeseries(results['bytes_per_device_per_minute'],
+                         self._statistics[node_id].bytes_per_device_per_minute)
         if updated:
             self._nodes_updated.add(node_id)
 
@@ -184,4 +205,5 @@ class BytesSessionAggregator(SessionAggregator):
                         node_id,
                         record.bytes_per_minute,
                         record.bytes_per_port_per_minute,
-                        record.bytes_per_domain_per_minute)
+                        record.bytes_per_domain_per_minute,
+                        record.bytes_per_device_per_minute)
