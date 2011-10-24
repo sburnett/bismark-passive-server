@@ -54,7 +54,8 @@ class UpdateStatisticsSessionAggregator(SessionAggregator):
                         session_id,
                         results,
                         updated):
-        self._update_statistics[node_id].update(results['update_statistics'])
+        self._update_statistics[node_id].update(
+                results['update_statistics'])
         if updated:
             self._nodes_updated.add(node_id)
 

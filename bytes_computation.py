@@ -1,8 +1,6 @@
 from collections import defaultdict, namedtuple
 import re
 
-import pdb
-
 import db
 from session_computations import \
         SessionProcessor, SessionAggregator, merge_timeseries
@@ -198,10 +196,12 @@ class BytesSessionAggregator(SessionAggregator):
     ResultsRecord = namedtuple('ResultsRecord',
                                ['bytes_per_minute',
                                 'bytes_per_port_per_minute',
-                                'bytes_per_domain_per_minute',
-                                'bytes_per_device_per_minute',
-                                'bytes_per_device_per_port_per_minute',
-                                'bytes_per_device_per_domain_per_minute' ])
+                                'bytes_per_domain_per_minute'])
+    ContextResultsRecord = namedtuple(
+            'ContextResultsRecord',
+            ['bytes_per_device_per_minute',
+             'bytes_per_device_per_port_per_minute',
+             'bytes_per_device_per_domain_per_minute'])
 
     def __init__(self, username, database):
         super(BytesSessionAggregator, self).__init__()
@@ -209,15 +209,18 @@ class BytesSessionAggregator(SessionAggregator):
         self._username = username
         self._database = database
 
-        self._statistics = defaultdict(lambda:
+        self._node_statistics = defaultdict(lambda:
                 self.ResultsRecord(
                     bytes_per_minute=defaultdict(int),
                     bytes_per_port_per_minute=defaultdict(int),
-                    bytes_per_domain_per_minute=defaultdict(int),
+                    bytes_per_domain_per_minute=defaultdict(int)))
+        self._nodes_updated = set()
+        self._context_statistics = defaultdict(lambda:
+                self.ContextResultsRecord(
                     bytes_per_device_per_minute=defaultdict(int),
                     bytes_per_device_per_port_per_minute=defaultdict(int),
                     bytes_per_device_per_domain_per_minute=defaultdict(int)))
-        self._nodes_updated = set()
+        self._contexts_updated = set()
 
     def augment_results(self,
                         node_id,
@@ -226,31 +229,44 @@ class BytesSessionAggregator(SessionAggregator):
                         results,
                         updated):
         merge_timeseries(results['bytes_per_minute'],
-                         self._statistics[node_id].bytes_per_minute)
+                         self._node_statistics[node_id]\
+                                 .bytes_per_minute)
         merge_timeseries(results['bytes_per_port_per_minute'],
-                         self._statistics[node_id].bytes_per_port_per_minute)
+                         self._node_statistics[node_id]\
+                                 .bytes_per_port_per_minute)
         merge_timeseries(results['bytes_per_domain_per_minute'],
-                         self._statistics[node_id].bytes_per_domain_per_minute)
+                         self._node_statistics[node_id]\
+                                 .bytes_per_domain_per_minute)
         merge_timeseries(results['bytes_per_device_per_minute'],
-                         self._statistics[node_id].bytes_per_device_per_minute)
+                         self._context_statistics[node_id, anonymization_id]\
+                                 .bytes_per_device_per_minute)
         merge_timeseries(
                 results['bytes_per_device_per_port_per_minute'],
-                self._statistics[node_id].bytes_per_device_per_port_per_minute)
+                self._context_statistics[node_id, anonymization_id]\
+                        .bytes_per_device_per_port_per_minute)
         merge_timeseries(
                 results['bytes_per_device_per_domain_per_minute'],
-                self._statistics[node_id].bytes_per_device_per_domain_per_minute)
+                self._context_statistics[node_id, anonymization_id]\
+                        .bytes_per_device_per_domain_per_minute)
         if updated:
             self._nodes_updated.add(node_id)
+            self._contexts_updated.add((node_id, anonymization_id))
 
     def store_results(self):
         database = db.BismarkPassiveDatabase(self._username, self._database)
-        for node_id, record in self._statistics.items():
+        for node_id, record in self._node_statistics.items():
             if node_id in self._nodes_updated:
-                database.import_byte_statistics(
+                database.import_node_byte_statistics(
                         node_id,
                         record.bytes_per_minute,
                         record.bytes_per_port_per_minute,
-                        record.bytes_per_domain_per_minute,
+                        record.bytes_per_domain_per_minute)
+        for (node_id, anonymization_context), record \
+                in self._context_statistics.items():
+            if (node_id, anonymization_context) in self._contexts_updated:
+                database.import_context_byte_statistics(
+                        node_id,
+                        anonymization_context,
                         record.bytes_per_device_per_minute,
                         record.bytes_per_device_per_port_per_minute,
                         record.bytes_per_device_per_domain_per_minute)

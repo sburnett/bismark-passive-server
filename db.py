@@ -8,22 +8,23 @@ class BismarkPassiveDatabase(object):
         cur.close()
         self._conn.commit()
 
-    def import_byte_statistics(self,
-                               node_id,
-                               bytes_per_minute,
-                               bytes_per_port_per_minute,
-                               bytes_per_domain_per_minute,
-                               bytes_per_device_per_minute,
-                               bytes_per_device_per_port_per_minute,
-                               bytes_per_device_per_domain_per_minute):
+    def import_node_byte_statistics(self,
+                                    node_id,
+                                    bytes_per_minute,
+                                    bytes_per_port_per_minute,
+                                    bytes_per_domain_per_minute):
         cur = self._conn.cursor()
         cur.execute('DELETE FROM bytes_per_minute WHERE node_id = %s',
                     (node_id, ));
         bytes_per_minute_args = []
         for rounded_timestamp, size in bytes_per_minute.items():
-            bytes_per_minute_args.append((node_id, rounded_timestamp, size))
+            bytes_per_minute_args.append((node_id,
+                                          rounded_timestamp,
+                                          size))
         cur.executemany('''INSERT INTO bytes_per_minute
-                           (node_id, timestamp, bytes_transferred)
+                           (node_id,
+                            timestamp,
+                            bytes_transferred)
                            VALUES (%s, %s, %s)''',
                         bytes_per_minute_args)
         cur.execute('DELETE FROM bytes_per_port_per_minute WHERE node_id = %s',
@@ -31,10 +32,15 @@ class BismarkPassiveDatabase(object):
         bytes_per_port_per_minute_args = []
         for (rounded_timestamp, port), size in \
                 bytes_per_port_per_minute.items():
-            bytes_per_port_per_minute_args.append(
-                    (node_id, rounded_timestamp, port, size))
+            bytes_per_port_per_minute_args.append((node_id,
+                                                   rounded_timestamp,
+                                                   port,
+                                                   size))
         cur.executemany('''INSERT INTO bytes_per_port_per_minute
-                           (node_id, timestamp, port, bytes_transferred)
+                           (node_id,
+                            timestamp,
+                            port,
+                            bytes_transferred)
                            VALUES (%s, %s, %s, %s)''',
                         bytes_per_port_per_minute_args)
         cur.execute(
@@ -43,59 +49,100 @@ class BismarkPassiveDatabase(object):
         bytes_per_domain_per_minute_args = []
         for (rounded_timestamp, domain), size in \
                 bytes_per_domain_per_minute.items():
-            bytes_per_domain_per_minute_args.append(
-                    (node_id, rounded_timestamp, domain, size))
+            bytes_per_domain_per_minute_args.append((node_id,
+                                                     rounded_timestamp,
+                                                     domain,
+                                                     size))
         cur.executemany('''INSERT INTO bytes_per_domain_per_minute
-                           (node_id, timestamp, domain, bytes_transferred)
+                           (node_id,
+                            timestamp,
+                            domain,
+                            bytes_transferred)
                            VALUES (%s, %s, %s, %s)''',
                         bytes_per_domain_per_minute_args)
 
+        self._conn.commit()
+
+    def import_context_byte_statistics(self,
+                                       node_id,
+                                       anonymization_context,
+                                       bytes_per_device_per_minute,
+                                       bytes_per_device_per_port_per_minute,
+                                       bytes_per_device_per_domain_per_minute):
+        cur = self._conn.cursor()
+
         cur.execute(
-                'DELETE FROM bytes_per_device_per_minute WHERE node_id = %s',
-                (node_id, ));
+                '''DELETE FROM bytes_per_device_per_minute
+                   WHERE node_id = %s AND anonymization_context = %s''',
+                (node_id, anonymization_context));
         bytes_per_device_per_minute_args = []
         for (rounded_timestamp, mac_address), size in \
                 bytes_per_device_per_minute.items():
-            bytes_per_device_per_minute_args.append(
-                    (node_id, rounded_timestamp, mac_address, size))
+            bytes_per_device_per_minute_args.append((node_id,
+                                                     anonymization_context,
+                                                     rounded_timestamp,
+                                                     mac_address,
+                                                     size))
         cur.executemany('''INSERT INTO bytes_per_device_per_minute
-                           (node_id, timestamp, mac_address, bytes_transferred)
-                           VALUES (%s, %s, %s, %s)''',
+                           (node_id,
+                            anonymization_context,
+                            timestamp,
+                            mac_address,
+                            bytes_transferred)
+                           VALUES (%s, %s, %s, %s, %s)''',
                         bytes_per_device_per_minute_args)
 
         cur.execute(
                 '''DELETE FROM bytes_per_device_per_port_per_minute
-                   WHERE node_id = %s''',
-                (node_id, ));
+                   WHERE node_id = %s AND anonymization_context = %s''',
+                (node_id, anonymization_context));
         bytes_per_device_per_port_per_minute_args = []
         for (rounded_timestamp, mac_address, port), size in \
                 bytes_per_device_per_port_per_minute.items():
             bytes_per_device_per_port_per_minute_args.append(
-                    (node_id, rounded_timestamp, mac_address, port, size))
+                    (node_id,
+                     anonymization_context,
+                     rounded_timestamp,
+                     mac_address,
+                     port,
+                     size))
         cur.executemany('''INSERT INTO bytes_per_device_per_port_per_minute
-                           (node_id, timestamp, mac_address, port, bytes_transferred)
-                           VALUES (%s, %s, %s, %s, %s)''',
+                           (node_id,
+                            anonymization_context,
+                            timestamp,
+                            mac_address,
+                            port,
+                            bytes_transferred)
+                           VALUES (%s, %s, %s, %s, %s, %s)''',
                         bytes_per_device_per_port_per_minute_args)
 
         cur.execute(
                 '''DELETE FROM bytes_per_device_per_domain_per_minute
-                   WHERE node_id = %s''',
-                (node_id, ));
+                   WHERE node_id = %s AND anonymization_context = %s''',
+                (node_id, anonymization_context));
         bytes_per_device_per_domain_per_minute_args = []
         for (rounded_timestamp, mac_address, domain), size in \
                 bytes_per_device_per_domain_per_minute.items():
             bytes_per_device_per_domain_per_minute_args.append(
-                    (node_id, rounded_timestamp, mac_address, domain, size))
+                    (node_id,
+                     anonymization_context,
+                     rounded_timestamp,
+                     mac_address,
+                     domain,
+                     size))
         cur.executemany('''INSERT INTO bytes_per_device_per_domain_per_minute
-                           (node_id, timestamp, mac_address, domain, bytes_transferred)
-                           VALUES (%s, %s, %s, %s, %s)''',
+                           (node_id,
+                            anonymization_context,
+                            timestamp,
+                            mac_address,
+                            domain,
+                            bytes_transferred)
+                           VALUES (%s, %s, %s, %s, %s, %s)''',
                         bytes_per_device_per_domain_per_minute_args)
 
         self._conn.commit()
 
-    def import_update_statistics(self,
-                                 node_id,
-                                 update_statistics):
+    def import_update_statistics(self, node_id, update_statistics):
         cur = self._conn.cursor()
         cur.execute('DELETE FROM update_statistics WHERE node_id = %s',
                     (node_id, ))
@@ -114,14 +161,17 @@ class BismarkPassiveDatabase(object):
                         statistics.a_records_size,
                         statistics.cname_records_size))
         cur.executemany('''INSERT INTO update_statistics
-                           (node_id, timestamp, pcap_dropped, iface_dropped,
+                           (node_id, timestamp,
+                            pcap_dropped, iface_dropped,
                             packet_series_dropped, flow_table_dropped,
                             dropped_a_records, dropped_cname_records,
                             packet_series_size, flow_table_size,
                             a_records_size, cname_records_size)
                            VALUES
-                           (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                           (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                           ''',
                         update_statistics_args)
 
         self._conn.commit()
+
 
