@@ -15,6 +15,8 @@ class BytesSessionProcessor(SessionProcessor):
         self._bytes_per_port_per_minute = defaultdict(int)
         self._bytes_per_domain_per_minute = defaultdict(int)
         self._bytes_per_device_per_minute = defaultdict(int)
+        self._bytes_per_device_per_port_per_minute = defaultdict(int)
+        self._bytes_per_device_per_domain_per_minute = defaultdict(int)
 
         self._whitelist = set()
         self._address_map = {}
@@ -95,8 +97,24 @@ class BytesSessionProcessor(SessionProcessor):
                 port_key = (rounded_timestamp, flow.destination_port)
             elif flow.destination_ip in self._address_map:
                 port_key = (rounded_timestamp, flow.source_port)
-            if port_key is not None:
-                self._bytes_per_port_per_minute[port_key] += packet.size
+            else:
+                port_key = (rounded_timestamp, -1)
+            self._bytes_per_port_per_minute[port_key] += packet.size
+
+            device_key = None
+            if flow.source_ip in self._mac_address_map:
+                device_key = (rounded_timestamp,
+                              self._mac_address_map[flow.source_ip])
+            elif flow.destination_ip in self._mac_address_map:
+                device_key = (rounded_timestamp,
+                              self._mac_address_map[flow.destination_ip])
+            else:
+                device_key = (rounded_timestamp, 'unknown')
+            self._bytes_per_device_per_minute[device_key] += packet.size
+
+            device_port_key = (rounded_timestamp, device_key[1], port_key[1])
+            self._bytes_per_device_per_port_per_minute[device_port_key] \
+                    += packet.size
 
             key = None
             if flow.source_ip in self._address_map \
@@ -113,16 +131,29 @@ class BytesSessionProcessor(SessionProcessor):
                     domain_key = (rounded_timestamp, domain)
                     self._bytes_per_domain_per_minute[domain_key] \
                             += packet.size
-
-            device_key = None
-            if flow.source_ip in self._mac_address_map:
-                device_key = (rounded_timestamp,
-                              self._mac_address_map[flow.source_ip])
-            elif flow.destination_ip in self._mac_address_map:
-                device_key = (rounded_timestamp,
-                              self._mac_address_map[flow.destination_ip])
-            if device_key is not None:
-                self._bytes_per_device_per_minute[device_key] += packet.size
+                    device_domain_key = (rounded_timestamp,
+                                         device_key[1],
+                                         domain)
+                    self._bytes_per_device_per_domain_per_minute[
+                            device_domain_key] += packet.size
+            else:
+                domain_key = (rounded_timestamp, 'unknown')
+                self._bytes_per_domain_per_minute[domain_key] += packet.size
+                device_domain_key \
+                        = (rounded_timestamp, device_key[1], 'unknown')
+                self._bytes_per_device_per_domain_per_minute[
+                        device_domain_key] += packet.size
+        else:
+            self._bytes_per_port_per_minute[rounded_timestamp, -1] \
+                    += packet.size
+            self._bytes_per_domain_per_minute[rounded_timestamp, 'unknown'] \
+                    += packet.size
+            self._bytes_per_device_per_minute[rounded_timestamp, 'unknown'] \
+                    += packet.size
+            self._bytes_per_device_per_port_per_minute[
+                    rounded_timestamp, 'unknown', -1] != packet.size
+            self._bytes_per_device_per_domain_per_minute[
+                    rounded_timestamp, 'unknown', 'unknown'] != packet.size
 
     def process_update(self, update):
         for domain in update.whitelist:
@@ -157,14 +188,20 @@ class BytesSessionProcessor(SessionProcessor):
                  'bytes_per_domain_per_minute': \
                          self._bytes_per_domain_per_minute,
                  'bytes_per_device_per_minute': \
-                         self._bytes_per_device_per_minute }
+                         self._bytes_per_device_per_minute,
+                 'bytes_per_device_per_port_per_minute': \
+                         self._bytes_per_device_per_port_per_minute,
+                 'bytes_per_device_per_domain_per_minute': \
+                         self._bytes_per_device_per_domain_per_minute }
 
 class BytesSessionAggregator(SessionAggregator):
     ResultsRecord = namedtuple('ResultsRecord',
                                ['bytes_per_minute',
                                 'bytes_per_port_per_minute',
                                 'bytes_per_domain_per_minute',
-                                'bytes_per_device_per_minute'])
+                                'bytes_per_device_per_minute',
+                                'bytes_per_device_per_port_per_minute',
+                                'bytes_per_device_per_domain_per_minute' ])
 
     def __init__(self, username, database):
         super(BytesSessionAggregator, self).__init__()
@@ -177,7 +214,9 @@ class BytesSessionAggregator(SessionAggregator):
                     bytes_per_minute=defaultdict(int),
                     bytes_per_port_per_minute=defaultdict(int),
                     bytes_per_domain_per_minute=defaultdict(int),
-                    bytes_per_device_per_minute=defaultdict(int)))
+                    bytes_per_device_per_minute=defaultdict(int),
+                    bytes_per_device_per_port_per_minute=defaultdict(int),
+                    bytes_per_device_per_domain_per_minute=defaultdict(int)))
         self._nodes_updated = set()
 
     def augment_results(self,
@@ -194,6 +233,12 @@ class BytesSessionAggregator(SessionAggregator):
                          self._statistics[node_id].bytes_per_domain_per_minute)
         merge_timeseries(results['bytes_per_device_per_minute'],
                          self._statistics[node_id].bytes_per_device_per_minute)
+        merge_timeseries(
+                results['bytes_per_device_per_port_per_minute'],
+                self._statistics[node_id].bytes_per_device_per_port_per_minute)
+        merge_timeseries(
+                results['bytes_per_device_per_domain_per_minute'],
+                self._statistics[node_id].bytes_per_device_per_domain_per_minute)
         if updated:
             self._nodes_updated.add(node_id)
 
@@ -206,4 +251,6 @@ class BytesSessionAggregator(SessionAggregator):
                         record.bytes_per_minute,
                         record.bytes_per_port_per_minute,
                         record.bytes_per_domain_per_minute,
-                        record.bytes_per_device_per_minute)
+                        record.bytes_per_device_per_minute,
+                        record.bytes_per_device_per_port_per_minute,
+                        record.bytes_per_device_per_domain_per_minute)

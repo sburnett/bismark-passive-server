@@ -13,7 +13,9 @@ class BismarkPassiveDatabase(object):
                                bytes_per_minute,
                                bytes_per_port_per_minute,
                                bytes_per_domain_per_minute,
-                               bytes_per_device_per_minute):
+                               bytes_per_device_per_minute,
+                               bytes_per_device_per_port_per_minute,
+                               bytes_per_device_per_domain_per_minute):
         cur = self._conn.cursor()
         cur.execute('DELETE FROM bytes_per_minute WHERE node_id = %s',
                     (node_id, ));
@@ -60,6 +62,34 @@ class BismarkPassiveDatabase(object):
                            (node_id, timestamp, mac_address, bytes_transferred)
                            VALUES (%s, %s, %s, %s)''',
                         bytes_per_device_per_minute_args)
+
+        cur.execute(
+                '''DELETE FROM bytes_per_device_per_port_per_minute
+                   WHERE node_id = %s''',
+                (node_id, ));
+        bytes_per_device_per_port_per_minute_args = []
+        for (rounded_timestamp, mac_address, port), size in \
+                bytes_per_device_per_port_per_minute.items():
+            bytes_per_device_per_port_per_minute_args.append(
+                    (node_id, rounded_timestamp, mac_address, port, size))
+        cur.executemany('''INSERT INTO bytes_per_device_per_port_per_minute
+                           (node_id, timestamp, mac_address, port, bytes_transferred)
+                           VALUES (%s, %s, %s, %s, %s)''',
+                        bytes_per_device_per_port_per_minute_args)
+
+        cur.execute(
+                '''DELETE FROM bytes_per_device_per_domain_per_minute
+                   WHERE node_id = %s''',
+                (node_id, ));
+        bytes_per_device_per_domain_per_minute_args = []
+        for (rounded_timestamp, mac_address, domain), size in \
+                bytes_per_device_per_domain_per_minute.items():
+            bytes_per_device_per_domain_per_minute_args.append(
+                    (node_id, rounded_timestamp, mac_address, domain, size))
+        cur.executemany('''INSERT INTO bytes_per_device_per_domain_per_minute
+                           (node_id, timestamp, mac_address, domain, bytes_transferred)
+                           VALUES (%s, %s, %s, %s, %s)''',
+                        bytes_per_device_per_domain_per_minute_args)
 
         self._conn.commit()
 

@@ -107,6 +107,62 @@ SELECT node_id, mac_address, sum(bytes_transferred)
 FROM bytes_per_device_per_minute
 GROUP BY node_id, mac_address;
 
+CREATE TABLE bytes_per_device_per_port_per_minute (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
+    mac_address varchar NOT NULL,
+    port integer NOT NULL,
+    bytes_transferred integer NOT NULL,
+    UNIQUE (node_id, mac_address, port, timestamp)
+);
+
+CREATE OR REPLACE VIEW bytes_per_device_per_port_per_hour
+(node_id, timestamp, mac_address, port, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, mac_address, port, sum(bytes_transferred)
+FROM bytes_per_device_per_port_per_minute
+GROUP BY rounded_timestamp, node_id, mac_address, port;
+
+CREATE OR REPLACE VIEW bytes_per_device_per_port_per_day
+(node_id, timestamp, mac_address, port, bytes_transferred) AS
+SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, mac_address, port, sum(bytes_transferred)
+FROM bytes_per_device_per_port_per_minute
+GROUP BY rounded_timestamp, node_id, mac_address, port;
+
+CREATE OR REPLACE VIEW bytes_per_device_per_port_total
+(node_id, mac_address, port, bytes_transferred) AS
+SELECT node_id, mac_address, port, sum(bytes_transferred)
+FROM bytes_per_device_per_port_per_minute
+GROUP BY node_id, mac_address, port;
+
+CREATE TABLE bytes_per_device_per_domain_per_minute (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    timestamp timestamp with time zone NOT NULL,
+    mac_address varchar NOT NULL,
+    domain varchar NOT NULL,
+    bytes_transferred integer NOT NULL,
+    UNIQUE (node_id, mac_address, domain, timestamp)
+);
+
+CREATE OR REPLACE VIEW bytes_per_device_per_domain_per_hour
+(node_id, timestamp, mac_address, domain, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, mac_address, domain, sum(bytes_transferred)
+FROM bytes_per_device_per_domain_per_minute
+GROUP BY rounded_timestamp, node_id, mac_address, domain;
+
+CREATE OR REPLACE VIEW bytes_per_device_per_domain_per_day
+(node_id, timestamp, mac_address, domain, bytes_transferred) AS
+SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, mac_address, domain, sum(bytes_transferred)
+FROM bytes_per_device_per_domain_per_minute
+GROUP BY rounded_timestamp, node_id, mac_address, domain;
+
+CREATE OR REPLACE VIEW bytes_per_device_per_domain_total
+(node_id, mac_address, domain, bytes_transferred) AS
+SELECT node_id, mac_address, domain, sum(bytes_transferred)
+FROM bytes_per_device_per_domain_per_minute
+GROUP BY node_id, mac_address, domain;
+
 CREATE TABLE update_statistics (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,

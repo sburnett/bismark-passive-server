@@ -231,6 +231,9 @@ class TestBytesSessionProcessor(unittest.TestCase):
                 = processor.results['bytes_per_domain_per_minute']
         self.assertTrue(
                 bytes_per_domain_per_minute[
+                    datetime(1970, 1, 1), 'unknown'] == 10)
+        self.assertTrue(
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'foo.com'] == 2)
         self.assertTrue(
                 bytes_per_domain_per_minute[
@@ -247,7 +250,7 @@ class TestBytesSessionProcessor(unittest.TestCase):
         self.assertTrue(
                 bytes_per_domain_per_minute[
                     datetime(1970, 1, 1, 0, 3), 'bar.org'] == 50)
-        self.assertTrue(len(bytes_per_domain_per_minute) == 6)
+        self.assertTrue(len(bytes_per_domain_per_minute) == 7)
 
     def test_bytes_domain_anonymized(self):
         whitelist = [ 'foo.com', 'bar.org', 'gorp.net' ]
@@ -332,7 +335,10 @@ class TestBytesSessionProcessor(unittest.TestCase):
         self.assertTrue(
                 bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'bar.org'] == 10)
-        self.assertTrue(len(bytes_per_domain_per_minute) == 1)
+        self.assertTrue(
+                bytes_per_domain_per_minute[
+                    datetime(1970, 1, 1), 'unknown'] == 22)
+        self.assertTrue(len(bytes_per_domain_per_minute) == 2)
 
     def test_bytes_domain_expire(self):
         whitelist = [ 'foo.com', 'bar.org', 'gorp.net' ]
@@ -406,6 +412,9 @@ class TestBytesSessionProcessor(unittest.TestCase):
                 = processor.results['bytes_per_domain_per_minute']
         self.assertTrue(
                 bytes_per_domain_per_minute[
+                    datetime(1970, 1, 1), 'unknown'] == 10)
+        self.assertTrue(
+                bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'foo.com'] == 6)
         self.assertTrue(
                 bytes_per_domain_per_minute[
@@ -413,7 +422,7 @@ class TestBytesSessionProcessor(unittest.TestCase):
         self.assertTrue(
                 bytes_per_domain_per_minute[
                     datetime(1970, 1, 1), 'bar.org'] == 2)
-        self.assertTrue(len(bytes_per_domain_per_minute) == 3)
+        self.assertTrue(len(bytes_per_domain_per_minute) == 4)
 
 if __name__ == '__main__':
     unittest.main()
