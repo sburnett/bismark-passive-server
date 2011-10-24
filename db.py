@@ -17,28 +17,28 @@ class BismarkPassiveDatabase(object):
         cur.execute('DELETE FROM bytes_per_minute WHERE node_id = %s',
                     (node_id, ));
         bytes_per_minute_args = []
-        for rounded_timestamp, size in bytes_per_minute.items():
+        for rounded_eventstamp, size in bytes_per_minute.items():
             bytes_per_minute_args.append((node_id,
-                                          rounded_timestamp,
+                                          rounded_eventstamp,
                                           size))
         cur.executemany('''INSERT INTO bytes_per_minute
                            (node_id,
-                            timestamp,
+                            eventstamp,
                             bytes_transferred)
                            VALUES (%s, %s, %s)''',
                         bytes_per_minute_args)
         cur.execute('DELETE FROM bytes_per_port_per_minute WHERE node_id = %s',
                     (node_id, ));
         bytes_per_port_per_minute_args = []
-        for (rounded_timestamp, port), size in \
+        for (rounded_eventstamp, port), size in \
                 bytes_per_port_per_minute.items():
             bytes_per_port_per_minute_args.append((node_id,
-                                                   rounded_timestamp,
+                                                   rounded_eventstamp,
                                                    port,
                                                    size))
         cur.executemany('''INSERT INTO bytes_per_port_per_minute
                            (node_id,
-                            timestamp,
+                            eventstamp,
                             port,
                             bytes_transferred)
                            VALUES (%s, %s, %s, %s)''',
@@ -47,15 +47,15 @@ class BismarkPassiveDatabase(object):
                 'DELETE FROM bytes_per_domain_per_minute WHERE node_id = %s',
                 (node_id, ));
         bytes_per_domain_per_minute_args = []
-        for (rounded_timestamp, domain), size in \
+        for (rounded_eventstamp, domain), size in \
                 bytes_per_domain_per_minute.items():
             bytes_per_domain_per_minute_args.append((node_id,
-                                                     rounded_timestamp,
+                                                     rounded_eventstamp,
                                                      domain,
                                                      size))
         cur.executemany('''INSERT INTO bytes_per_domain_per_minute
                            (node_id,
-                            timestamp,
+                            eventstamp,
                             domain,
                             bytes_transferred)
                            VALUES (%s, %s, %s, %s)''',
@@ -76,17 +76,17 @@ class BismarkPassiveDatabase(object):
                    WHERE node_id = %s AND anonymization_context = %s''',
                 (node_id, anonymization_context));
         bytes_per_device_per_minute_args = []
-        for (rounded_timestamp, mac_address), size in \
+        for (rounded_eventstamp, mac_address), size in \
                 bytes_per_device_per_minute.items():
             bytes_per_device_per_minute_args.append((node_id,
                                                      anonymization_context,
-                                                     rounded_timestamp,
+                                                     rounded_eventstamp,
                                                      mac_address,
                                                      size))
         cur.executemany('''INSERT INTO bytes_per_device_per_minute
                            (node_id,
                             anonymization_context,
-                            timestamp,
+                            eventstamp,
                             mac_address,
                             bytes_transferred)
                            VALUES (%s, %s, %s, %s, %s)''',
@@ -97,19 +97,19 @@ class BismarkPassiveDatabase(object):
                    WHERE node_id = %s AND anonymization_context = %s''',
                 (node_id, anonymization_context));
         bytes_per_device_per_port_per_minute_args = []
-        for (rounded_timestamp, mac_address, port), size in \
+        for (rounded_eventstamp, mac_address, port), size in \
                 bytes_per_device_per_port_per_minute.items():
             bytes_per_device_per_port_per_minute_args.append(
                     (node_id,
                      anonymization_context,
-                     rounded_timestamp,
+                     rounded_eventstamp,
                      mac_address,
                      port,
                      size))
         cur.executemany('''INSERT INTO bytes_per_device_per_port_per_minute
                            (node_id,
                             anonymization_context,
-                            timestamp,
+                            eventstamp,
                             mac_address,
                             port,
                             bytes_transferred)
@@ -121,19 +121,19 @@ class BismarkPassiveDatabase(object):
                    WHERE node_id = %s AND anonymization_context = %s''',
                 (node_id, anonymization_context));
         bytes_per_device_per_domain_per_minute_args = []
-        for (rounded_timestamp, mac_address, domain), size in \
+        for (rounded_eventstamp, mac_address, domain), size in \
                 bytes_per_device_per_domain_per_minute.items():
             bytes_per_device_per_domain_per_minute_args.append(
                     (node_id,
                      anonymization_context,
-                     rounded_timestamp,
+                     rounded_eventstamp,
                      mac_address,
                      domain,
                      size))
         cur.executemany('''INSERT INTO bytes_per_device_per_domain_per_minute
                            (node_id,
                             anonymization_context,
-                            timestamp,
+                            eventstamp,
                             mac_address,
                             domain,
                             bytes_transferred)
@@ -147,9 +147,9 @@ class BismarkPassiveDatabase(object):
         cur.execute('DELETE FROM update_statistics WHERE node_id = %s',
                     (node_id, ))
         update_statistics_args = []
-        for timestamp, statistics in update_statistics.items():
+        for eventstamp, statistics in update_statistics.items():
             update_statistics_args.append(
-                    (node_id, timestamp,
+                    (node_id, eventstamp,
                         statistics.pcap_dropped,
                         statistics.iface_dropped,
                         statistics.packet_series_dropped,
@@ -161,7 +161,7 @@ class BismarkPassiveDatabase(object):
                         statistics.a_records_size,
                         statistics.cname_records_size))
         cur.executemany('''INSERT INTO update_statistics
-                           (node_id, timestamp,
+                           (node_id, eventstamp,
                             pcap_dropped, iface_dropped,
                             packet_series_dropped, flow_table_dropped,
                             dropped_a_records, dropped_cname_records,
@@ -174,4 +174,11 @@ class BismarkPassiveDatabase(object):
 
         self._conn.commit()
 
-
+    def refresh_memoization(self):
+        cur = self._conn.cursor()
+        cur.execute('SELECT mv_name FROM matviews')
+        for row in cur.fetchall():
+            print 'Memoizing %s' % row[0]
+            mutation_cur = self._conn.cursor()
+            mutation_cur.execute('SELECT refresh_matview(%s)', (row[0],))
+        self._conn.commit()

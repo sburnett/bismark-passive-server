@@ -277,3 +277,4 @@ class BytesSessionAggregator(SessionAggregator):
                         record.bytes_per_device_per_minute,
                         record.bytes_per_device_per_port_per_minute,
                         record.bytes_per_device_per_domain_per_minute)
+        database.refresh_memoization()

@@ -188,3 +188,7 @@ SELECT execute('GRANT SELECT ON bismark_passive.'||tablename||' to abhishek;')
 FROM pg_tables WHERE schemaname = 'bismark_passive';
 SELECT execute('GRANT SELECT ON bismark_passive.'||viewname||' to abhishek;')
 FROM pg_views WHERE schemaname = 'bismark_passive';
+
+\i materialized_views.sql
+SELECT execute('SELECT create_matview('''||viewname||'_memoized'', '''||viewname||''');')
+FROM pg_views WHERE schemaname = 'bismark_passive';
