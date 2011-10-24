@@ -3,22 +3,22 @@ SET search_path TO bismark_passive;
 CREATE TABLE bytes_per_minute (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
+    eventstamp timestamp with time zone NOT NULL,
     bytes_transferred integer NOT NULL,
-    UNIQUE (node_id, timestamp)
+    UNIQUE (node_id, eventstamp)
 );
 
 CREATE OR REPLACE VIEW bytes_per_hour
-(node_id, timestamp, bytes_transferred) AS
-SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, sum(bytes_transferred)
+(node_id, eventstamp, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', eventstamp) AS rounded_eventstamp, sum(bytes_transferred)
 FROM bytes_per_minute
-GROUP BY rounded_timestamp, node_id;
+GROUP BY rounded_eventstamp, node_id;
 
 CREATE OR REPLACE VIEW bytes_per_day
-(node_id, timestamp, bytes_transferred) AS
-SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, sum(bytes_transferred)
+(node_id, eventstamp, bytes_transferred) AS
+SELECT node_id, date_trunc('day', eventstamp) AS rounded_eventstamp, sum(bytes_transferred)
 FROM bytes_per_minute
-GROUP BY rounded_timestamp, node_id;
+GROUP BY rounded_eventstamp, node_id;
 
 CREATE OR REPLACE VIEW bytes_total
 (node_id, bytes_transferred) AS
@@ -29,23 +29,23 @@ GROUP BY node_id;
 CREATE TABLE bytes_per_port_per_minute (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
+    eventstamp timestamp with time zone NOT NULL,
     port integer NOT NULL,
     bytes_transferred integer NOT NULL,
-    UNIQUE (node_id, port, timestamp)
+    UNIQUE (node_id, port, eventstamp)
 );
 
 CREATE OR REPLACE VIEW bytes_per_port_per_hour
-(node_id, timestamp, port, bytes_transferred) AS
-SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, port, sum(bytes_transferred)
+(node_id, eventstamp, port, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', eventstamp) AS rounded_eventstamp, port, sum(bytes_transferred)
 FROM bytes_per_port_per_minute
-GROUP BY rounded_timestamp, node_id, port;
+GROUP BY rounded_eventstamp, node_id, port;
 
 CREATE OR REPLACE VIEW bytes_per_port_per_day
-(node_id, timestamp, port, bytes_transferred) AS
-SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, port, sum(bytes_transferred)
+(node_id, eventstamp, port, bytes_transferred) AS
+SELECT node_id, date_trunc('day', eventstamp) AS rounded_eventstamp, port, sum(bytes_transferred)
 FROM bytes_per_port_per_minute
-GROUP BY rounded_timestamp, node_id, port;
+GROUP BY rounded_eventstamp, node_id, port;
 
 CREATE OR REPLACE VIEW bytes_per_port_total
 (node_id, port, bytes_transferred) AS
@@ -56,23 +56,23 @@ GROUP BY node_id, port;
 CREATE TABLE bytes_per_domain_per_minute (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
+    eventstamp timestamp with time zone NOT NULL,
     domain varchar NOT NULL,
     bytes_transferred integer NOT NULL,
-    UNIQUE (node_id, domain, timestamp)
+    UNIQUE (node_id, domain, eventstamp)
 );
 
 CREATE OR REPLACE VIEW bytes_per_domain_per_hour
-(node_id, timestamp, domain, bytes_transferred) AS
-SELECT node_id, date_trunc('hour', timestamp) AS rounded_timestamp, domain, sum(bytes_transferred)
+(node_id, eventstamp, domain, bytes_transferred) AS
+SELECT node_id, date_trunc('hour', eventstamp) AS rounded_eventstamp, domain, sum(bytes_transferred)
 FROM bytes_per_domain_per_minute
-GROUP BY rounded_timestamp, node_id, domain;
+GROUP BY rounded_eventstamp, node_id, domain;
 
 CREATE OR REPLACE VIEW bytes_per_domain_per_day
-(node_id, timestamp, domain, bytes_transferred) AS
-SELECT node_id, date_trunc('day', timestamp) AS rounded_timestamp, domain, sum(bytes_transferred)
+(node_id, eventstamp, domain, bytes_transferred) AS
+SELECT node_id, date_trunc('day', eventstamp) AS rounded_eventstamp, domain, sum(bytes_transferred)
 FROM bytes_per_domain_per_minute
-GROUP BY rounded_timestamp, node_id, domain;
+GROUP BY rounded_eventstamp, node_id, domain;
 
 CREATE OR REPLACE VIEW bytes_per_domain_total
 (node_id, domain, bytes_transferred) AS
@@ -84,23 +84,23 @@ CREATE TABLE bytes_per_device_per_minute (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
     anonymization_context varchar NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
+    eventstamp timestamp with time zone NOT NULL,
     mac_address varchar NOT NULL,
     bytes_transferred integer NOT NULL,
-    UNIQUE (node_id, anonymization_context, mac_address, timestamp)
+    UNIQUE (node_id, anonymization_context, mac_address, eventstamp)
 );
 
 CREATE OR REPLACE VIEW bytes_per_device_per_hour
-(node_id, anonymization_context, timestamp, mac_address, bytes_transferred) AS
-SELECT node_id, anonymization_context, date_trunc('hour', timestamp) AS rounded_timestamp, mac_address, sum(bytes_transferred)
+(node_id, anonymization_context, eventstamp, mac_address, bytes_transferred) AS
+SELECT node_id, anonymization_context, date_trunc('hour', eventstamp) AS rounded_eventstamp, mac_address, sum(bytes_transferred)
 FROM bytes_per_device_per_minute
-GROUP BY rounded_timestamp, node_id, anonymization_context, mac_address;
+GROUP BY rounded_eventstamp, node_id, anonymization_context, mac_address;
 
 CREATE OR REPLACE VIEW bytes_per_device_per_day
-(node_id, anonymization_context, timestamp, mac_address, bytes_transferred) AS
-SELECT node_id, anonymization_context, date_trunc('day', timestamp) AS rounded_timestamp, mac_address, sum(bytes_transferred)
+(node_id, anonymization_context, eventstamp, mac_address, bytes_transferred) AS
+SELECT node_id, anonymization_context, date_trunc('day', eventstamp) AS rounded_eventstamp, mac_address, sum(bytes_transferred)
 FROM bytes_per_device_per_minute
-GROUP BY rounded_timestamp, node_id, anonymization_context, mac_address;
+GROUP BY rounded_eventstamp, node_id, anonymization_context, mac_address;
 
 CREATE OR REPLACE VIEW bytes_per_device_total
 (node_id, anonymization_context, mac_address, bytes_transferred) AS
@@ -112,24 +112,24 @@ CREATE TABLE bytes_per_device_per_port_per_minute (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
     anonymization_context varchar NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
+    eventstamp timestamp with time zone NOT NULL,
     mac_address varchar NOT NULL,
     port integer NOT NULL,
     bytes_transferred integer NOT NULL,
-    UNIQUE (node_id, anonymization_context, mac_address, port, timestamp)
+    UNIQUE (node_id, anonymization_context, mac_address, port, eventstamp)
 );
 
 CREATE OR REPLACE VIEW bytes_per_device_per_port_per_hour
-(node_id, anonymization_context, timestamp, mac_address, port, bytes_transferred) AS
-SELECT node_id, anonymization_context, date_trunc('hour', timestamp) AS rounded_timestamp, mac_address, port, sum(bytes_transferred)
+(node_id, anonymization_context, eventstamp, mac_address, port, bytes_transferred) AS
+SELECT node_id, anonymization_context, date_trunc('hour', eventstamp) AS rounded_eventstamp, mac_address, port, sum(bytes_transferred)
 FROM bytes_per_device_per_port_per_minute
-GROUP BY rounded_timestamp, node_id, anonymization_context, mac_address, port;
+GROUP BY rounded_eventstamp, node_id, anonymization_context, mac_address, port;
 
 CREATE OR REPLACE VIEW bytes_per_device_per_port_per_day
-(node_id, anonymization_context, timestamp, mac_address, port, bytes_transferred) AS
-SELECT node_id, anonymization_context, date_trunc('day', timestamp) AS rounded_timestamp, mac_address, port, sum(bytes_transferred)
+(node_id, anonymization_context, eventstamp, mac_address, port, bytes_transferred) AS
+SELECT node_id, anonymization_context, date_trunc('day', eventstamp) AS rounded_eventstamp, mac_address, port, sum(bytes_transferred)
 FROM bytes_per_device_per_port_per_minute
-GROUP BY rounded_timestamp, node_id, anonymization_context, mac_address, port;
+GROUP BY rounded_eventstamp, node_id, anonymization_context, mac_address, port;
 
 CREATE OR REPLACE VIEW bytes_per_device_per_port_total
 (node_id, anonymization_context, mac_address, port, bytes_transferred) AS
@@ -141,24 +141,24 @@ CREATE TABLE bytes_per_device_per_domain_per_minute (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
     anonymization_context varchar NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
+    eventstamp timestamp with time zone NOT NULL,
     mac_address varchar NOT NULL,
     domain varchar NOT NULL,
     bytes_transferred integer NOT NULL,
-    UNIQUE (node_id, anonymization_context, mac_address, domain, timestamp)
+    UNIQUE (node_id, anonymization_context, mac_address, domain, eventstamp)
 );
 
 CREATE OR REPLACE VIEW bytes_per_device_per_domain_per_hour
-(node_id, anonymization_context, timestamp, mac_address, domain, bytes_transferred) AS
-SELECT node_id, anonymization_context, date_trunc('hour', timestamp) AS rounded_timestamp, mac_address, domain, sum(bytes_transferred)
+(node_id, anonymization_context, eventstamp, mac_address, domain, bytes_transferred) AS
+SELECT node_id, anonymization_context, date_trunc('hour', eventstamp) AS rounded_eventstamp, mac_address, domain, sum(bytes_transferred)
 FROM bytes_per_device_per_domain_per_minute
-GROUP BY rounded_timestamp, node_id, anonymization_context, mac_address, domain;
+GROUP BY rounded_eventstamp, node_id, anonymization_context, mac_address, domain;
 
 CREATE OR REPLACE VIEW bytes_per_device_per_domain_per_day
-(node_id, anonymization_context, timestamp, mac_address, domain, bytes_transferred) AS
-SELECT node_id, anonymization_context, date_trunc('day', timestamp) AS rounded_timestamp, mac_address, domain, sum(bytes_transferred)
+(node_id, anonymization_context, eventstamp, mac_address, domain, bytes_transferred) AS
+SELECT node_id, anonymization_context, date_trunc('day', eventstamp) AS rounded_eventstamp, mac_address, domain, sum(bytes_transferred)
 FROM bytes_per_device_per_domain_per_minute
-GROUP BY rounded_timestamp, node_id, anonymization_context, mac_address, domain;
+GROUP BY rounded_eventstamp, node_id, anonymization_context, mac_address, domain;
 
 CREATE OR REPLACE VIEW bytes_per_device_per_domain_total
 (node_id, anonymization_context, mac_address, domain, bytes_transferred) AS
@@ -169,7 +169,7 @@ GROUP BY node_id, anonymization_context, mac_address, domain;
 CREATE TABLE update_statistics (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
-    timestamp timestamp with time zone NOT NULL,
+    eventstamp timestamp with time zone NOT NULL,
     pcap_dropped integer NOT NULL,
     iface_dropped integer NOT NULL,
     packet_series_dropped integer NOT NULL,
@@ -180,7 +180,7 @@ CREATE TABLE update_statistics (
     flow_table_size integer NOT NULL,
     a_records_size integer NOT NULL,
     cname_records_size integer NOT NULL,
-    UNIQUE (node_id, timestamp)
+    UNIQUE (node_id, eventstamp)
 );
 
 CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;
