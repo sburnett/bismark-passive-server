@@ -183,3 +183,8 @@ CREATE TABLE update_statistics (
     UNIQUE (node_id, timestamp)
 );
 
+CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;
+SELECT execute('GRANT SELECT ON bismark_passive.'||tablename||' to abhishek;')
+FROM pg_tables WHERE schemaname = 'bismark_passive';
+SELECT execute('GRANT SELECT ON bismark_passive.'||viewname||' to abhishek;')
+FROM pg_views WHERE schemaname = 'bismark_passive';
