@@ -90,29 +90,36 @@ class BytesSessionProcessor(SessionProcessor):
 
         flow = self._flows.get(packet.flow_id)
         if flow is not None:
-            port_key = None
-            if flow.source_ip in self._address_map:
+            port_key = []
+            if flow.source_ip in self._address_map \
+                    and flow.destination_ip not in self._address_map:
                 port_key = (rounded_timestamp, flow.destination_port)
-            elif flow.destination_ip in self._address_map:
+            elif flow.destination_ip in self._address_map \
+                    and flow.source_ip not in self._address_map:
                 port_key = (rounded_timestamp, flow.source_port)
             else:
                 port_key = (rounded_timestamp, -1)
             self._bytes_per_port_per_minute[port_key] += packet.size
 
-            device_key = None
+            device_keys = []
             if flow.source_ip in self._mac_address_map:
-                device_key = (rounded_timestamp,
-                              self._mac_address_map[flow.source_ip])
-            elif flow.destination_ip in self._mac_address_map:
-                device_key = (rounded_timestamp,
-                              self._mac_address_map[flow.destination_ip])
-            else:
-                device_key = (rounded_timestamp, 'unknown')
-            self._bytes_per_device_per_minute[device_key] += packet.size
+                device_keys.append((rounded_timestamp,
+                                    self._mac_address_map[flow.source_ip]))
+            if flow.destination_ip in self._mac_address_map:
+                device_keys.append(
+                        (rounded_timestamp,
+                         self._mac_address_map[flow.destination_ip]))
+            if device_keys == []:
+                device_keys = [(rounded_timestamp, 'unknown')]
+            for device_key in device_keys:
+                self._bytes_per_device_per_minute[device_key] += packet.size
 
-            device_port_key = (rounded_timestamp, device_key[1], port_key[1])
-            self._bytes_per_device_per_port_per_minute[device_port_key] \
-                    += packet.size
+            for device_key in device_keys:
+                device_port_key = (rounded_timestamp,
+                                   device_key[1],
+                                   port_key[1])
+                self._bytes_per_device_per_port_per_minute[device_port_key] \
+                        += packet.size
 
             key = None
             if flow.source_ip in self._address_map \
