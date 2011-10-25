@@ -10,3 +10,16 @@ DROP TABLE update_statistics CASCADE;
 
 SELECT execute('SELECT drop_matview('''||mv_name||''');') FROM matviews;
 DROP TABLE matviews;
+
+DROP FUNCTION merge_bytes_per_minute(
+    varchar, timestamp with time zone, int);
+DROP FUNCTION merge_bytes_per_port_per_minute(
+    varchar, timestamp with time zone, integer, integer);
+DROP FUNCTION merge_bytes_per_domain_per_minute(
+    varchar, timestamp with time zone, varchar, integer);
+DROP FUNCTION merge_bytes_per_device_per_minute(
+    varchar, varchar, timestamp with time zone, varchar, integer);
+DROP FUNCTION merge_bytes_per_device_per_port_per_minute(
+    varchar, varchar, timestamp with time zone, varchar, integer, integer);
+DROP FUNCTION merge_bytes_per_device_per_domain_per_minute(
+    varchar, varchar, timestamp with time zone, varchar, varchar, integer);

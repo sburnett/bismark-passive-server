@@ -33,10 +33,14 @@ class UpdateStatisticsSessionProcessor(SessionProcessor):
                 flow_table_size = update.flow_table_size,
                 a_records_size = len(update.a_records),
                 cname_records_size = len(update.cname_records))
+        return None
 
     @property
     def results(self):
         return { 'update_statistics': self._update_statistics }
+
+    def augment_session_result(self, session_result, update_result):
+        return None
 
 class UpdateStatisticsSessionAggregator(SessionAggregator):
     def __init__(self, username, database):
@@ -53,7 +57,8 @@ class UpdateStatisticsSessionAggregator(SessionAggregator):
                         anonymization_id,
                         session_id,
                         results,
-                        updated):
+                        updated,
+                        process_result):
         self._update_statistics[node_id].update(
                 results['update_statistics'])
         if updated:

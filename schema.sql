@@ -192,3 +192,183 @@ FROM pg_views WHERE schemaname = 'bismark_passive';
 \i materialized_views.sql
 SELECT execute('SELECT create_matview('''||viewname||'_memoized'', '''||viewname||''');')
 FROM pg_views WHERE schemaname = 'bismark_passive';
+
+CREATE OR REPLACE FUNCTION
+merge_bytes_per_minute(v_node_id varchar,
+                       v_eventstamp timestamp with time zone,
+                       v_bytes_transferred integer)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO bytes_per_minute
+        (node_id, eventstamp, bytes_transferred)
+        VALUES (v_node_id, v_eventstamp, v_bytes_transferred)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE bytes_per_minute SET
+        bytes_transferred = v_bytes_transferred
+        WHERE node_id = v_node_id
+        AND eventstamp = v_eventstamp
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_bytes_per_port_per_minute(v_node_id varchar,
+                                v_eventstamp timestamp with time zone,
+                                v_port integer,
+                                v_bytes_transferred integer)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO bytes_per_port_per_minute
+        (node_id, eventstamp, port, bytes_transferred)
+        VALUES (v_node_id, v_eventstamp, v_port, v_bytes_transferred)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE bytes_per_port_per_minute SET
+        bytes_transferred = v_bytes_transferred
+        WHERE node_id = v_node_id
+        AND eventstamp = v_eventstamp
+        AND port = v_port
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_bytes_per_domain_per_minute(v_node_id varchar,
+                                  v_eventstamp timestamp with time zone,
+                                  v_domain varchar,
+                                  v_bytes_transferred integer)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO bytes_per_domain_per_minute
+        (node_id, eventstamp, domain, bytes_transferred)
+        VALUES (v_node_id, v_eventstamp, v_domain, v_bytes_transferred)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE bytes_per_domain_per_minute SET
+        bytes_transferred = v_bytes_transferred
+        WHERE node_id = v_node_id
+        AND eventstamp = v_eventstamp
+        AND domain = v_domain
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_bytes_per_device_per_minute(v_node_id varchar,
+                                  v_anonymization_context varchar,
+                                  v_eventstamp timestamp with time zone,
+                                  v_mac_address varchar,
+                                  v_bytes_transferred integer)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO bytes_per_device_per_minute
+        (node_id, anonymization_context, eventstamp, mac_address, bytes_transferred)
+        VALUES (v_node_id,
+                v_anonymization_context,
+                v_eventstamp,
+                v_mac_address,
+                v_bytes_transferred)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE bytes_per_device_per_minute SET
+        bytes_transferred = v_bytes_transferred
+        WHERE node_id = v_node_id
+        AND anonymization_context = v_anonymization_context
+        AND eventstamp = v_eventstamp
+        AND mac_address = v_mac_address
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_bytes_per_device_per_port_per_minute(
+    v_node_id varchar,
+    v_anonymization_context varchar,
+    v_eventstamp timestamp with time zone,
+    v_mac_address varchar,
+    v_port integer,
+    v_bytes_transferred integer)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO bytes_per_device_per_port_per_minute
+        (node_id, anonymization_context, eventstamp, mac_address, port, bytes_transferred)
+        VALUES (v_node_id,
+                v_anonymization_context,
+                v_eventstamp,
+                v_mac_address,
+                v_port,
+                v_bytes_transferred)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE bytes_per_device_per_port_per_minute SET
+        bytes_transferred = v_bytes_transferred
+        WHERE node_id = v_node_id
+        AND anonymization_context = v_anonymization_context
+        AND eventstamp = v_eventstamp
+        AND mac_address = v_mac_address
+        AND port = v_port
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_bytes_per_device_per_domain_per_minute(
+    v_node_id varchar,
+    v_anonymization_context varchar,
+    v_eventstamp timestamp with time zone,
+    v_mac_address varchar,
+    v_domain varchar,
+    v_bytes_transferred integer)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO bytes_per_device_per_domain_per_minute
+        (node_id, anonymization_context, eventstamp, mac_address, domain, bytes_transferred)
+        VALUES (v_node_id,
+                v_anonymization_context,
+                v_eventstamp,
+                v_mac_address,
+                v_domain,
+                v_bytes_transferred)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE bytes_per_device_per_domain_per_minute SET
+        bytes_transferred = v_bytes_transferred
+        WHERE node_id = v_node_id
+        AND anonymization_context = v_anonymization_context
+        AND eventstamp = v_eventstamp
+        AND mac_address = v_mac_address
+        AND domain = v_domain
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;

@@ -1,4 +1,5 @@
 from collections import defaultdict, namedtuple
+from datetime import datetime
 import re
 
 import db
@@ -160,6 +161,8 @@ class BytesSessionProcessor(SessionProcessor):
             self._bytes_per_device_per_domain_per_minute[
                     rounded_timestamp, 'unknown', 'unknown'] != packet.size
 
+        return rounded_timestamp
+
     def process_update(self, update):
         for domain in update.whitelist:
             self._whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))
@@ -183,8 +186,11 @@ class BytesSessionProcessor(SessionProcessor):
         for cname_record in update.cname_records:
             self.process_cname_record(cname_record, update.packet_series)
 
+        oldest_timestamp = datetime.max
         for packet in update.packet_series:
-            self.process_packet(packet)
+            current_timestamp = self.process_packet(packet)
+            oldest_timestamp = min(oldest_timestamp, current_timestamp)
+        return oldest_timestamp
 
     @property
     def results(self):
@@ -199,6 +205,12 @@ class BytesSessionProcessor(SessionProcessor):
                  'bytes_per_device_per_domain_per_minute': \
                          self._bytes_per_device_per_domain_per_minute }
 
+    def augment_session_result(self, session_result, update_result):
+        if session_result is None:
+            return update_result
+        else:
+            return min(update_result, session_result)
+
 class BytesSessionAggregator(SessionAggregator):
     ResultsRecord = namedtuple('ResultsRecord',
                                ['bytes_per_minute',
@@ -210,31 +222,33 @@ class BytesSessionAggregator(SessionAggregator):
              'bytes_per_device_per_port_per_minute',
              'bytes_per_device_per_domain_per_minute'])
 
-    def __init__(self, username, database):
+    def __init__(self, username, database, rebuild=False):
         super(BytesSessionAggregator, self).__init__()
 
         self._username = username
         self._database = database
+        self._rebuild = rebuild
 
         self._node_statistics = defaultdict(lambda:
                 self.ResultsRecord(
                     bytes_per_minute=defaultdict(int),
                     bytes_per_port_per_minute=defaultdict(int),
                     bytes_per_domain_per_minute=defaultdict(int)))
-        self._nodes_updated = set()
         self._context_statistics = defaultdict(lambda:
                 self.ContextResultsRecord(
                     bytes_per_device_per_minute=defaultdict(int),
                     bytes_per_device_per_port_per_minute=defaultdict(int),
                     bytes_per_device_per_domain_per_minute=defaultdict(int)))
-        self._contexts_updated = set()
+        self._records_updated = set()
+        self._oldest_timestamps = defaultdict(lambda: datetime.max)
 
     def augment_results(self,
                         node_id,
                         anonymization_id,
                         session_id,
                         results,
-                        updated):
+                        updated,
+                        process_result):
         merge_timeseries(results['bytes_per_minute'],
                          self._node_statistics[node_id]\
                                  .bytes_per_minute)
@@ -256,24 +270,40 @@ class BytesSessionAggregator(SessionAggregator):
                 self._context_statistics[node_id, anonymization_id]\
                         .bytes_per_device_per_domain_per_minute)
         if updated:
-            self._nodes_updated.add(node_id)
-            self._contexts_updated.add((node_id, anonymization_id))
+            self._records_updated.add(node_id)
+            context_key = (node_id, anonymization_id)
+            self._records_updated.add(context_key)
+            self._oldest_timestamps[node_id] \
+                    = min(self._oldest_timestamps[node_id], process_result)
+            self._oldest_timestamps[context_key] \
+                    = min(self._oldest_timestamps[context_key], process_result)
 
     def store_results(self):
         database = db.BismarkPassiveDatabase(self._username, self._database)
         for node_id, record in self._node_statistics.items():
-            if node_id in self._nodes_updated:
+            if node_id in self._records_updated or self._rebuild:
+                if self._rebuild:
+                    oldest_timestamp = datetime.min
+                else:
+                    oldest_timestamp = self._oldest_timestamps.get(node_id)
                 database.import_node_byte_statistics(
                         node_id,
+                        oldest_timestamp,
                         record.bytes_per_minute,
                         record.bytes_per_port_per_minute,
                         record.bytes_per_domain_per_minute)
         for (node_id, anonymization_context), record \
                 in self._context_statistics.items():
-            if (node_id, anonymization_context) in self._contexts_updated:
+            context_key = (node_id, anonymization_context)
+            if context_key in self._records_updated or self._rebuild:
+                if self._rebuild:
+                    oldest_timestamp = datetime.min
+                else:
+                    oldest_timestamp = self._oldest_timestamps.get(context_key)
                 database.import_context_byte_statistics(
                         node_id,
                         anonymization_context,
+                        oldest_timestamp,
                         record.bytes_per_device_per_minute,
                         record.bytes_per_device_per_port_per_minute,
                         record.bytes_per_device_per_domain_per_minute)

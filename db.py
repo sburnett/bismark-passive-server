@@ -10,134 +10,97 @@ class BismarkPassiveDatabase(object):
 
     def import_node_byte_statistics(self,
                                     node_id,
+                                    oldest_updated_timestamp,
                                     bytes_per_minute,
                                     bytes_per_port_per_minute,
                                     bytes_per_domain_per_minute):
         cur = self._conn.cursor()
-        cur.execute('DELETE FROM bytes_per_minute WHERE node_id = %s',
-                    (node_id, ));
+
         bytes_per_minute_args = []
         for rounded_eventstamp, size in bytes_per_minute.items():
-            bytes_per_minute_args.append((node_id,
-                                          rounded_eventstamp,
-                                          size))
-        cur.executemany('''INSERT INTO bytes_per_minute
-                           (node_id,
-                            eventstamp,
-                            bytes_transferred)
-                           VALUES (%s, %s, %s)''',
+            if rounded_eventstamp >= oldest_updated_timestamp:
+                bytes_per_minute_args.append((node_id,
+                                              rounded_eventstamp,
+                                              size))
+        cur.executemany('SELECT merge_bytes_per_minute(%s, %s, %s)',
                         bytes_per_minute_args)
-        cur.execute('DELETE FROM bytes_per_port_per_minute WHERE node_id = %s',
-                    (node_id, ));
+
         bytes_per_port_per_minute_args = []
         for (rounded_eventstamp, port), size in \
                 bytes_per_port_per_minute.items():
-            bytes_per_port_per_minute_args.append((node_id,
-                                                   rounded_eventstamp,
-                                                   port,
-                                                   size))
-        cur.executemany('''INSERT INTO bytes_per_port_per_minute
-                           (node_id,
-                            eventstamp,
-                            port,
-                            bytes_transferred)
-                           VALUES (%s, %s, %s, %s)''',
-                        bytes_per_port_per_minute_args)
-        cur.execute(
-                'DELETE FROM bytes_per_domain_per_minute WHERE node_id = %s',
-                (node_id, ));
+            if rounded_eventstamp >= oldest_updated_timestamp:
+                bytes_per_port_per_minute_args.append((node_id,
+                                                       rounded_eventstamp,
+                                                       port,
+                                                       size))
+        cur.executemany(
+                'SELECT merge_bytes_per_port_per_minute(%s, %s, %s, %s)',
+                bytes_per_port_per_minute_args)
+
         bytes_per_domain_per_minute_args = []
         for (rounded_eventstamp, domain), size in \
                 bytes_per_domain_per_minute.items():
-            bytes_per_domain_per_minute_args.append((node_id,
-                                                     rounded_eventstamp,
-                                                     domain,
-                                                     size))
-        cur.executemany('''INSERT INTO bytes_per_domain_per_minute
-                           (node_id,
-                            eventstamp,
-                            domain,
-                            bytes_transferred)
-                           VALUES (%s, %s, %s, %s)''',
-                        bytes_per_domain_per_minute_args)
+            if rounded_eventstamp >= oldest_updated_timestamp:
+                bytes_per_domain_per_minute_args.append((node_id,
+                                                         rounded_eventstamp,
+                                                         domain,
+                                                         size))
+        cur.executemany(
+                'SELECT merge_bytes_per_domain_per_minute(%s, %s, %s, %s)',
+                bytes_per_domain_per_minute_args)
 
         self._conn.commit()
 
     def import_context_byte_statistics(self,
                                        node_id,
                                        anonymization_context,
+                                       oldest_updated_timestamp,
                                        bytes_per_device_per_minute,
                                        bytes_per_device_per_port_per_minute,
                                        bytes_per_device_per_domain_per_minute):
         cur = self._conn.cursor()
 
-        cur.execute(
-                '''DELETE FROM bytes_per_device_per_minute
-                   WHERE node_id = %s AND anonymization_context = %s''',
-                (node_id, anonymization_context));
         bytes_per_device_per_minute_args = []
         for (rounded_eventstamp, mac_address), size in \
                 bytes_per_device_per_minute.items():
-            bytes_per_device_per_minute_args.append((node_id,
-                                                     anonymization_context,
-                                                     rounded_eventstamp,
-                                                     mac_address,
-                                                     size))
-        cur.executemany('''INSERT INTO bytes_per_device_per_minute
-                           (node_id,
-                            anonymization_context,
-                            eventstamp,
-                            mac_address,
-                            bytes_transferred)
-                           VALUES (%s, %s, %s, %s, %s)''',
-                        bytes_per_device_per_minute_args)
+            if rounded_eventstamp >= oldest_updated_timestamp: 
+                bytes_per_device_per_minute_args.append((node_id,
+                                                         anonymization_context,
+                                                         rounded_eventstamp,
+                                                         mac_address,
+                                                         size))
+        cur.executemany(
+                'SELECT merge_bytes_per_device_per_minute(%s, %s, %s, %s, %s)',
+                bytes_per_device_per_minute_args)
 
-        cur.execute(
-                '''DELETE FROM bytes_per_device_per_port_per_minute
-                   WHERE node_id = %s AND anonymization_context = %s''',
-                (node_id, anonymization_context));
         bytes_per_device_per_port_per_minute_args = []
         for (rounded_eventstamp, mac_address, port), size in \
                 bytes_per_device_per_port_per_minute.items():
-            bytes_per_device_per_port_per_minute_args.append(
-                    (node_id,
-                     anonymization_context,
-                     rounded_eventstamp,
-                     mac_address,
-                     port,
-                     size))
-        cur.executemany('''INSERT INTO bytes_per_device_per_port_per_minute
-                           (node_id,
-                            anonymization_context,
-                            eventstamp,
-                            mac_address,
-                            port,
-                            bytes_transferred)
-                           VALUES (%s, %s, %s, %s, %s, %s)''',
+            if rounded_eventstamp >= oldest_updated_timestamp:
+                bytes_per_device_per_port_per_minute_args.append(
+                        (node_id,
+                         anonymization_context,
+                         rounded_eventstamp,
+                         mac_address,
+                         port,
+                         size))
+        cur.executemany('''SELECT merge_bytes_per_device_per_port_per_minute
+                           (%s, %s, %s, %s, %s, %s)''',
                         bytes_per_device_per_port_per_minute_args)
 
-        cur.execute(
-                '''DELETE FROM bytes_per_device_per_domain_per_minute
-                   WHERE node_id = %s AND anonymization_context = %s''',
-                (node_id, anonymization_context));
         bytes_per_device_per_domain_per_minute_args = []
         for (rounded_eventstamp, mac_address, domain), size in \
                 bytes_per_device_per_domain_per_minute.items():
-            bytes_per_device_per_domain_per_minute_args.append(
-                    (node_id,
-                     anonymization_context,
-                     rounded_eventstamp,
-                     mac_address,
-                     domain,
-                     size))
-        cur.executemany('''INSERT INTO bytes_per_device_per_domain_per_minute
-                           (node_id,
-                            anonymization_context,
-                            eventstamp,
-                            mac_address,
-                            domain,
-                            bytes_transferred)
-                           VALUES (%s, %s, %s, %s, %s, %s)''',
+            if rounded_eventstamp >= oldest_updated_timestamp:
+                bytes_per_device_per_domain_per_minute_args.append(
+                        (node_id,
+                         anonymization_context,
+                         rounded_eventstamp,
+                         mac_address,
+                         domain,
+                         size))
+        cur.executemany('''SELECT merge_bytes_per_device_per_domain_per_minute
+                           (%s, %s, %s, %s, %s, %s)''',
                         bytes_per_device_per_domain_per_minute_args)
 
         self._conn.commit()

@@ -15,6 +15,9 @@ def parse_args():
     parser.add_option('-d', '--database', action='store', dest='db_name',
                       default='bismark_openwrt_live_v0_1',
                       help='Database name')
+    parser.add_option('-r', '--rebuild', action='store_true', dest='rebuild',
+                      default=False,
+                      help='Rebuild database from scratch (advanced)')
     options, args = parser.parse_args()
     if len(args) != 2:
         parser.error('Missing required option')
@@ -26,7 +29,9 @@ def main():
     (options, args) = parse_args()
     computations = [
             (BytesSessionProcessor,
-                BytesSessionAggregator(options.db_user, options.db_name)),
+                BytesSessionAggregator(options.db_user,
+                                       options.db_name,
+                                       options.rebuild)),
             (UpdateStatisticsSessionProcessor,
                 UpdateStatisticsSessionAggregator(options.db_user,
                                                   options.db_name))
