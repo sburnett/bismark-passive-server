@@ -23,3 +23,6 @@ DROP FUNCTION merge_bytes_per_device_per_port_per_minute(
     varchar, varchar, timestamp with time zone, varchar, integer, integer);
 DROP FUNCTION merge_bytes_per_device_per_domain_per_minute(
     varchar, varchar, timestamp with time zone, varchar, varchar, integer);
+DROP FUNCTION merge_update_statistics(
+    varchar, timestamp with time zone, integer, integer, integer, integer,
+    integer, integer, integer, integer, integer, integer);

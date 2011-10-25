@@ -372,3 +372,68 @@ BEGIN
     RETURN v_id;
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_update_statistics(v_node_id varchar,
+                        v_eventstamp timestamp with time zone,
+                        v_pcap_dropped integer,
+                        v_iface_dropped integer,
+                        v_packet_series_dropped integer,
+                        v_flow_table_dropped integer,
+                        v_dropped_a_records integer,
+                        v_dropped_cname_records integer,
+                        v_packet_series_size integer,
+                        v_flow_table_size integer,
+                        v_a_records_size integer,
+                        v_cname_records_size integer)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO update_statistics
+        (node_id,
+         eventstamp,
+         pcap_dropped,
+         iface_dropped,
+         packet_series_dropped,
+         flow_table_dropped,
+         dropped_a_records,
+         dropped_cname_records,
+         packet_series_size,
+         flow_table_size,
+         a_records_size,
+         cname_records_size)
+        VALUES
+        (v_node_id,
+         v_eventstamp,
+         v_pcap_dropped,
+         v_iface_dropped,
+         v_packet_series_dropped,
+         v_flow_table_dropped,
+         v_dropped_a_records,
+         v_dropped_cname_records,
+         v_packet_series_size,
+         v_flow_table_size,
+         v_a_records_size,
+         v_cname_records_size)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE update_statistics SET
+        pcap_dropped = v_pcap_dropped,
+        iface_dropped = v_iface_dropped,
+        packet_series_dropped = v_packet_series_dropped,
+        flow_table_dropped = v_flow_table_dropped,
+        dropped_a_records = v_dropped_a_records,
+        dropped_cname_records = v_dropped_cname_records,
+        packet_series_size = v_packet_series_size,
+        flow_table_size = v_flow_table_size,
+        a_records_size = v_a_records_size,
+        cname_records_size = v_cname_records_size
+        WHERE node_id = v_node_id
+        AND eventstamp = v_eventstamp
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;

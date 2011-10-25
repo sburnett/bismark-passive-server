@@ -105,10 +105,11 @@ class BismarkPassiveDatabase(object):
 
         self._conn.commit()
 
-    def import_update_statistics(self, node_id, update_statistics):
+    def import_update_statistics(self,
+                                 node_id,
+                                 oldest_timestamp,
+                                 update_statistics):
         cur = self._conn.cursor()
-        cur.execute('DELETE FROM update_statistics WHERE node_id = %s',
-                    (node_id, ))
         update_statistics_args = []
         for eventstamp, statistics in update_statistics.items():
             update_statistics_args.append(
@@ -123,16 +124,8 @@ class BismarkPassiveDatabase(object):
                         statistics.flow_table_size,
                         statistics.a_records_size,
                         statistics.cname_records_size))
-        cur.executemany('''INSERT INTO update_statistics
-                           (node_id, eventstamp,
-                            pcap_dropped, iface_dropped,
-                            packet_series_dropped, flow_table_dropped,
-                            dropped_a_records, dropped_cname_records,
-                            packet_series_size, flow_table_size,
-                            a_records_size, cname_records_size)
-                           VALUES
-                           (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                           ''',
+        cur.executemany('''SELECT merge_update_statistics
+                           (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
                         update_statistics_args)
 
         self._conn.commit()

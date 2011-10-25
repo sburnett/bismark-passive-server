@@ -34,7 +34,8 @@ def main():
                                        options.rebuild)),
             (UpdateStatisticsSessionProcessor,
                 UpdateStatisticsSessionAggregator(options.db_user,
-                                                  options.db_name))
+                                                  options.db_name,
+                                                  options.rebuild))
             ]
 
     process_sessions(computations,
