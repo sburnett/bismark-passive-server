@@ -166,3 +166,45 @@ def plot_hourly_traffic_ports_no_http(conn, node):
     ax.xaxis.set_major_locator(DayLocator())
     fig.autofmt_xdate()
     plt.savefig('%s_port_hourly_traffic_no_http.pdf' % node)
+
+def plot_hourly_traffic_devices(conn, node):
+    cur = conn.cursor()
+    cur.execute('''SELECT timestamp,mac_address,bytes_transferred
+                   FROM bytes_per_device_per_hour WHERE node_id = %s''',
+                (node,))
+
+    dates = {}
+    for row in cur:
+        dates.setdefault(row[0], [])
+        if len(dates[row[0]]) < 3:
+            dates[row[0]].append((row[1], float(row[2])/2**20))
+
+    lines = {}
+    for timestamp, elements in dates.items():
+        for mac_address, bytes in elements:
+            lines.setdefault(mac_address, [])
+            lines[mac_address].append((timestamp, bytes))
+    for mac_address, line in lines.items():
+        line.sort()
+        current_timestamp = line[0][0]
+        current_idx = 0
+        while current_timestamp <= line[-1][0]:
+            if current_timestamp < line[current_idx][0]:
+                line[current_idx:current_idx] = [(current_timestamp, 0)]
+            current_idx += 1
+            current_timestamp += datetime.timedelta(hours=1)
+
+    fig = plt.figure()
+    fig.suptitle('Hourly per-device traffic for %s' % node)
+    ax = fig.add_subplot(111)
+    for mac_address, line in lines.items():
+        xs, ys = zip(*line)
+        ax.plot(xs, ys, label=mac_address)
+    ax.legend(loc='upper left')
+    ax.set_xlabel('Time')
+    ax.set_ylabel('Megabytes')
+    ax.xaxis.set_major_formatter(DateFormatter('%Y-%m-%d'))
+    ax.xaxis.set_minor_locator(HourLocator())
+    ax.xaxis.set_major_locator(DayLocator())
+    fig.autofmt_xdate()
+    plt.savefig('%s_device_hourly_traffic.pdf' % node)
