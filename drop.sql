@@ -26,3 +26,11 @@ DROP FUNCTION merge_bytes_per_device_per_domain_per_minute(
 DROP FUNCTION merge_update_statistics(
     varchar, timestamp with time zone, integer, integer, integer, integer,
     integer, integer, integer, integer, integer, integer);
+DROP FUNCTION refresh_matviews_node_latest(varchar, timestamp with time zone);
+DROP FUNCTION refresh_matviews_context_latest(
+    varchar, varchar, timestamp with time zone);
+
+DROP FUNCTION refresh_matview_node_latest(
+    name, varchar, timestamp with time zone, varchar);
+DROP FUNCTION refresh_matview_context_latest(
+    name, varchar, varchar, timestamp with time zone, varchar);

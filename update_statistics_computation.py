@@ -74,7 +74,9 @@ class UpdateStatisticsSessionAggregator(SessionAggregator):
 
     def store_results(self):
         database = db.BismarkPassiveDatabase(self._username, self._database)
+        print 'Writing update statistics'
         for node_id, statistics in self._update_statistics.items():
+            print ' ', node_id
             if node_id in self._nodes_updated or self._rebuild:
                 if self._rebuild:
                     oldest_timestamp = datetime.min

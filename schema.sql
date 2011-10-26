@@ -197,23 +197,18 @@ CREATE OR REPLACE FUNCTION
 merge_bytes_per_minute(v_node_id varchar,
                        v_eventstamp timestamp with time zone,
                        v_bytes_transferred integer)
-RETURNS integer AS $$
-DECLARE
-    v_id integer;
+RETURNS VOID AS $$
 BEGIN
     BEGIN
         INSERT INTO bytes_per_minute
         (node_id, eventstamp, bytes_transferred)
-        VALUES (v_node_id, v_eventstamp, v_bytes_transferred)
-        RETURNING id INTO v_id;
+        VALUES (v_node_id, v_eventstamp, v_bytes_transferred);
     EXCEPTION WHEN unique_violation THEN
         UPDATE bytes_per_minute SET
         bytes_transferred = v_bytes_transferred
         WHERE node_id = v_node_id
-        AND eventstamp = v_eventstamp
-        RETURNING id INTO v_id;
+        AND eventstamp = v_eventstamp;
     END;
-    RETURN v_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -222,24 +217,19 @@ merge_bytes_per_port_per_minute(v_node_id varchar,
                                 v_eventstamp timestamp with time zone,
                                 v_port integer,
                                 v_bytes_transferred integer)
-RETURNS integer AS $$
-DECLARE
-    v_id integer;
+RETURNS VOID AS $$
 BEGIN
     BEGIN
         INSERT INTO bytes_per_port_per_minute
         (node_id, eventstamp, port, bytes_transferred)
-        VALUES (v_node_id, v_eventstamp, v_port, v_bytes_transferred)
-        RETURNING id INTO v_id;
+        VALUES (v_node_id, v_eventstamp, v_port, v_bytes_transferred);
     EXCEPTION WHEN unique_violation THEN
         UPDATE bytes_per_port_per_minute SET
         bytes_transferred = v_bytes_transferred
         WHERE node_id = v_node_id
         AND eventstamp = v_eventstamp
-        AND port = v_port
-        RETURNING id INTO v_id;
+        AND port = v_port;
     END;
-    RETURN v_id;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -435,5 +425,85 @@ BEGIN
         RETURNING id INTO v_id;
     END;
     RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+refresh_matviews_node_latest (v_node varchar,
+                              v_eventstamp timestamp with time zone)
+RETURNS VOID AS $$
+BEGIN
+    PERFORM refresh_matview_node_latest('bytes_per_hour_memoized',
+                                        v_node,
+                                        v_eventstamp,
+                                        'hour');
+    PERFORM refresh_matview_node_latest('bytes_per_day_memoized',
+                                        v_node,
+                                        v_eventstamp,
+                                        'day');
+    PERFORM refresh_matview_node_latest('bytes_per_port_per_hour_memoized',
+                                        v_node,
+                                        v_eventstamp,
+                                        'hour');
+    PERFORM refresh_matview_node_latest('bytes_per_port_per_day_memoized',
+                                        v_node,
+                                        v_eventstamp,
+                                        'day');
+    PERFORM refresh_matview_node_latest('bytes_per_domain_per_hour_memoized',
+                                        v_node,
+                                        v_eventstamp,
+                                        'hour');
+    PERFORM refresh_matview_node_latest('bytes_per_domain_per_day_memoized',
+                                        v_node,
+                                        v_eventstamp,
+                                        'day');
+    RETURN;
+END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION
+refresh_matviews_context_latest (v_node varchar,
+                                 v_anonymization_context varchar,
+                                 v_eventstamp timestamp with time zone)
+RETURNS VOID AS $$
+BEGIN
+    PERFORM refresh_matview_context_latest(
+        'bytes_per_device_per_hour_memoized',
+        v_node,
+        v_anonymization_context,
+        v_eventstamp,
+        'hour');
+    PERFORM refresh_matview_context_latest(
+        'bytes_per_device_per_day_memoized',
+        v_node,
+        v_anonymization_context,
+        v_eventstamp,
+        'day');
+    PERFORM refresh_matview_context_latest(
+        'bytes_per_device_per_port_per_hour_memoized',
+        v_node,
+        v_anonymization_context,
+        v_eventstamp,
+        'hour');
+    PERFORM refresh_matview_context_latest(
+        'bytes_per_device_per_port_per_day_memoized',
+        v_node,
+        v_anonymization_context,
+        v_eventstamp,
+        'day');
+    PERFORM refresh_matview_context_latest(
+        'bytes_per_device_per_domain_per_hour_memoized',
+        v_node,
+        v_anonymization_context,
+        v_eventstamp,
+        'hour');
+    PERFORM refresh_matview_context_latest(
+        'bytes_per_device_per_domain_per_day_memoized',
+        v_node,
+        v_anonymization_context,
+        v_eventstamp,
+        'day');
+    RETURN;
 END;
 $$ LANGUAGE plpgsql;

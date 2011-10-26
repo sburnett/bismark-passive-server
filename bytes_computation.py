@@ -280,7 +280,9 @@ class BytesSessionAggregator(SessionAggregator):
 
     def store_results(self):
         database = db.BismarkPassiveDatabase(self._username, self._database)
+        print 'Writing per-node tables'
         for node_id, record in self._node_statistics.items():
+            print ' ', node_id
             if node_id in self._records_updated or self._rebuild:
                 if self._rebuild:
                     oldest_timestamp = datetime.min
@@ -292,8 +294,10 @@ class BytesSessionAggregator(SessionAggregator):
                         record.bytes_per_minute,
                         record.bytes_per_port_per_minute,
                         record.bytes_per_domain_per_minute)
+        print 'Writing per-node-and-context tables'
         for (node_id, anonymization_context), record \
                 in self._context_statistics.items():
+            print ' ', node_id, anonymization_context
             context_key = (node_id, anonymization_context)
             if context_key in self._records_updated or self._rebuild:
                 if self._rebuild:
@@ -307,4 +311,3 @@ class BytesSessionAggregator(SessionAggregator):
                         record.bytes_per_device_per_minute,
                         record.bytes_per_device_per_port_per_minute,
                         record.bytes_per_device_per_domain_per_minute)
-        database.refresh_memoization()
