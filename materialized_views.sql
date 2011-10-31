@@ -30,6 +30,8 @@ CREATE OR REPLACE FUNCTION create_matview(NAME, NAME)
 
      EXECUTE ''GRANT SELECT ON '' || matview || '' TO PUBLIC'';
 
+     EXECUTE ''ALTER TABLE '' || matview || '' ADD PRIMARY KEY (id) '';
+
      INSERT INTO matviews (mv_name, v_name, last_refresh)
        VALUES (matview, view_name, CURRENT_TIMESTAMP);
 
