@@ -66,10 +66,10 @@ class SessionProcessor(object):
                 session_result = self.augment_session_result(session_result,
                                                              update_result)
                 self._last_sequence_number_processed = update.sequence_number
+                self._filenames_processed.add(filename)
                 print 'processed'
             else:
                 print 'skipped (sequence number)'
-            self._filenames_processed.add(filename)
             processed_new_update = True
         return processed_new_update, session_result
 

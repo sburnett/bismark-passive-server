@@ -2,8 +2,9 @@
 
 from glob import glob
 from gzip import GzipFile
+from hashlib import md5
 from optparse import OptionParser
-from os.path import basename, join
+from os.path import basename, join, splitext
 import tarfile
 
 from update_parser import PassiveUpdate
@@ -14,7 +15,18 @@ def index_traces(updates_directory, index_filename):
     tarnames_processed = index.tarnames
     for tarname in glob(join(updates_directory, '*.tar')):
         if basename(tarname) not in tarnames_processed:
-            print 'Indexing', tarname
+            print 'Indexing', tarname,
+            try:
+                true_sum = splitext(basename(tarname))[0].split('_')[3]
+                hasher = md5()
+                hasher.update(open(tarname, 'r').read())
+                if hasher.hexdigest() != true_sum:
+                    print '(invalid hash)'
+                    continue
+                else:
+                    print '(valid hash)'
+            except:
+                print
             tarball = tarfile.open(tarname, 'r')
             for tarmember in tarball.getmembers():
                 print ' ', tarmember.name
