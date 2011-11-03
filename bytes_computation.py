@@ -273,10 +273,11 @@ class BytesSessionAggregator(SessionAggregator):
             self._records_updated.add(node_id)
             context_key = (node_id, anonymization_id)
             self._records_updated.add(context_key)
-            self._oldest_timestamps[node_id] \
-                    = min(self._oldest_timestamps[node_id], process_result)
-            self._oldest_timestamps[context_key] \
-                    = min(self._oldest_timestamps[context_key], process_result)
+            if process_result is not None:
+                self._oldest_timestamps[node_id] \
+                        = min(self._oldest_timestamps[node_id], process_result)
+                self._oldest_timestamps[context_key] \
+                        = min(self._oldest_timestamps[context_key], process_result)
 
     def store_results(self):
         database = db.BismarkPassiveDatabase(self._username, self._database)

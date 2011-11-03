@@ -69,8 +69,9 @@ class UpdateStatisticsSessionAggregator(SessionAggregator):
                 results['update_statistics'])
         if updated:
             self._nodes_updated.add(node_id)
-            self._oldest_timestamps[node_id] \
-                    = min(self._oldest_timestamps[node_id], process_result)
+            if process_result is not None:
+                self._oldest_timestamps[node_id] \
+                        = min(self._oldest_timestamps[node_id], process_result)
 
     def store_results(self):
         database = db.BismarkPassiveDatabase(self._username, self._database)
