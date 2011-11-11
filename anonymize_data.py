@@ -87,7 +87,8 @@ def main():
         sys.exit(1)
     source_directory = sys.argv[1]
     destination_directory = sys.argv[2]
-    for filename in glob.glob(os.path.join(source_directory, '*')):
+    for filename in glob.glob(os.path.join(source_directory, '*.tar')):
+        print filename
         anonymize_update(filename, destination_directory)
 
 if __name__ == '__main__':
