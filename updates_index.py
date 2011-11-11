@@ -1,6 +1,8 @@
 from collections import namedtuple
 import sqlite3
 
+Session = namedtuple('Session', ['node_id', 'anonymization_context', 'id'])
+
 class UpdatesIndex(object):
     def __init__(self, filename):
         self._conn = sqlite3.connect(filename)
@@ -39,9 +41,6 @@ class UpdatesIndex(object):
         cur = self._conn.execute('''SELECT DISTINCT
                                     node_id, anonymization_context, session_id
                                     FROM updates''')
-        Session = namedtuple('Session', ['node_id',
-                                         'anonymization_context',
-                                         'id'])
         sessions = set()
         for row in cur:
             sessions.add(Session(

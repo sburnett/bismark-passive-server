@@ -16,6 +16,7 @@ class BytesSessionProcessor(SessionProcessor):
         self._bytes_per_device_per_minute = defaultdict(int)
         self._bytes_per_device_per_port_per_minute = defaultdict(int)
         self._bytes_per_device_per_domain_per_minute = defaultdict(int)
+        self._packet_size_per_port = defaultdict(int)
 
         self._whitelist = set()
         self._address_map = {}
@@ -95,9 +96,11 @@ class BytesSessionProcessor(SessionProcessor):
             if flow.source_ip in self._address_map \
                     and flow.destination_ip not in self._address_map:
                 port_key = (rounded_timestamp, flow.destination_port)
+                self._packet_size_per_port[flow.destination_port, packet.size] += 1
             elif flow.destination_ip in self._address_map \
                     and flow.source_ip not in self._address_map:
                 port_key = (rounded_timestamp, flow.source_port)
+                self._packet_size_per_port[flow.source_port, packet.size] += 1
             else:
                 port_key = (rounded_timestamp, -1)
             self._bytes_per_port_per_minute[port_key] += packet.size
@@ -203,7 +206,9 @@ class BytesSessionProcessor(SessionProcessor):
                  'bytes_per_device_per_port_per_minute': \
                          self._bytes_per_device_per_port_per_minute,
                  'bytes_per_device_per_domain_per_minute': \
-                         self._bytes_per_device_per_domain_per_minute }
+                         self._bytes_per_device_per_domain_per_minute,
+                 'packet_size_per_port': \
+                         self._packet_size_per_port }
 
     def augment_session_result(self, session_result, update_result):
         if session_result is None:
@@ -215,7 +220,9 @@ class BytesSessionAggregator(SessionAggregator):
     ResultsRecord = namedtuple('ResultsRecord',
                                ['bytes_per_minute',
                                 'bytes_per_port_per_minute',
-                                'bytes_per_domain_per_minute'])
+                                'bytes_per_domain_per_minute',
+                                'packet_size_per_port',
+                                'packet_count_per_port'])
     ContextResultsRecord = namedtuple(
             'ContextResultsRecord',
             ['bytes_per_device_per_minute',
@@ -233,7 +240,9 @@ class BytesSessionAggregator(SessionAggregator):
                 self.ResultsRecord(
                     bytes_per_minute=defaultdict(int),
                     bytes_per_port_per_minute=defaultdict(int),
-                    bytes_per_domain_per_minute=defaultdict(int)))
+                    bytes_per_domain_per_minute=defaultdict(int),
+                    packet_size_per_port=defaultdict(int),
+                    packet_count_per_port=defaultdict(int)))
         self._context_statistics = defaultdict(lambda:
                 self.ContextResultsRecord(
                     bytes_per_device_per_minute=defaultdict(int),
@@ -258,6 +267,9 @@ class BytesSessionAggregator(SessionAggregator):
         merge_timeseries(results['bytes_per_domain_per_minute'],
                          self._node_statistics[node_id]\
                                  .bytes_per_domain_per_minute)
+        merge_timeseries(results['packet_size_per_port'],
+                         self._node_statistics[node_id]\
+                                 .packet_size_per_port)
         merge_timeseries(results['bytes_per_device_per_minute'],
                          self._context_statistics[node_id, anonymization_id]\
                                  .bytes_per_device_per_minute)
@@ -295,6 +307,9 @@ class BytesSessionAggregator(SessionAggregator):
                         record.bytes_per_minute,
                         record.bytes_per_port_per_minute,
                         record.bytes_per_domain_per_minute)
+                database.import_size_statistics(
+                        node_id,
+                        record.packet_size_per_port)
         print 'Writing per-node-and-context tables'
         for (node_id, anonymization_context), record \
                 in self._context_statistics.items():

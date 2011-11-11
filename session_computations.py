@@ -50,14 +50,11 @@ class SessionProcessor(object):
         current_tarname = None
         for tarname, filename in update_files:
             if filename in self._filenames_processed:
-                print ' ', filename, 'skipped (filename)'
                 continue
             if current_tarname != tarname:
-                print tarname
                 current_tarname = tarname
                 full_tarname = join(updates_directory, current_tarname)
                 tarball = tarfile.open(full_tarname, 'r')
-            print ' ', filename,
             tarhandle = tarball.extractfile(filename)
             update_content = gzip.GzipFile(fileobj=tarhandle).read()
             update = PassiveUpdate(update_content)
@@ -67,9 +64,9 @@ class SessionProcessor(object):
                                                              update_result)
                 self._last_sequence_number_processed = update.sequence_number
                 self._filenames_processed.add(filename)
-                print 'processed'
             else:
-                print 'skipped (sequence number)'
+                print '%s:%s filename skipped: bad sequence number' \
+                        % (tarname, filename)
             processed_new_update = True
         return processed_new_update, session_result
 

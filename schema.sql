@@ -183,6 +183,15 @@ CREATE TABLE update_statistics (
     UNIQUE (node_id, eventstamp)
 );
 
+CREATE TABLE packet_sizes_per_port (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    port integer NOT NULL,
+    packet_size integer NOT NULL,
+    count integer,
+    UNIQUE (node_id, port, packet_size)
+);
+
 CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;
 SELECT execute('GRANT SELECT ON bismark_passive.'||tablename||' to abhishek;')
 FROM pg_tables WHERE schemaname = 'bismark_passive';
@@ -422,6 +431,36 @@ BEGIN
         cname_records_size = v_cname_records_size
         WHERE node_id = v_node_id
         AND eventstamp = v_eventstamp
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_packet_size_per_port(
+    v_node_id varchar,
+    v_port integer,
+    v_packet_size integer,
+    v_count integer)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO packet_sizes_per_port
+        (node_id, port, packet_size, count)
+        VALUES (v_node_id,
+                v_port,
+                v_packet_size,
+                v_count)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE packet_sizes_per_port SET
+        count = v_count
+        WHERE node_id = v_node_id
+        AND port = v_port
+        AND packet_size = v_packet_size
         RETURNING id INTO v_id;
     END;
     RETURN v_id;

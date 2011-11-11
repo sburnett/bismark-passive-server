@@ -55,6 +55,15 @@ class BismarkPassiveDatabase(object):
 
         self._conn.commit()
 
+    def import_size_statistics(self,
+                               node_id,
+                               packet_size_per_port):
+        cur = self._conn.cursor()
+        for (port, size), count in packet_size_per_port.items():
+            cur.execute('SELECT merge_packet_size_per_port(%s, %s, %s, %s)',
+                        (node_id, port, size, count))
+        self._conn.commit()
+
     def import_context_byte_statistics(self,
                                        node_id,
                                        anonymization_context,

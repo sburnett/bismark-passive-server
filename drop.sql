@@ -7,6 +7,7 @@ DROP TABLE bytes_per_device_per_minute CASCADE;
 DROP TABLE bytes_per_device_per_port_per_minute CASCADE;
 DROP TABLE bytes_per_device_per_domain_per_minute CASCADE;
 DROP TABLE update_statistics CASCADE;
+DROP TABLE packet_sizes_per_port CASCADE;
 
 SELECT execute('SELECT drop_matview('''||mv_name||''');') FROM matviews;
 DROP TABLE matviews;
@@ -26,6 +27,8 @@ DROP FUNCTION merge_bytes_per_device_per_domain_per_minute(
 DROP FUNCTION merge_update_statistics(
     varchar, timestamp with time zone, integer, integer, integer, integer,
     integer, integer, integer, integer, integer, integer);
+DROP FUNCTION merge_packet_size_per_port(
+    varchar, integer, integer, integer);
 DROP FUNCTION refresh_matviews_node_latest(varchar, timestamp with time zone);
 DROP FUNCTION refresh_matviews_context_latest(
     varchar, varchar, timestamp with time zone);
