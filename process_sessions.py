@@ -7,12 +7,12 @@ from os.path import join
 import tarfile
 
 from anonymize_data import anonymize_update
-from bytes_computation import BytesSessionProcessor
+from byte_count_processor import ByteCountSessionProcessor
 from correlation_processor import CorrelationSessionProcessor
 from index_traces import index_traces
-from session_computations import GlobalContext, SessionContextManager
+from session_context import GlobalContext, SessionContextManager
 from update_parser import PassiveUpdate
-from update_statistics_computation import UpdateStatisticsSessionProcessor
+from update_statistics_processor import UpdateStatisticsSessionProcessor
 from updates_index import UpdatesIndex
 from utils import return_negative_one
 
@@ -127,9 +127,9 @@ def main():
     (options, args) = parse_args()
     processors = [
             CorrelationSessionProcessor(),
-            BytesSessionProcessor(options.db_user,
-                                  options.db_name,
-                                  options.rebuild),
+            ByteCountSessionProcessor(options.db_user,
+                                      options.db_name,
+                                      options.rebuild),
             UpdateStatisticsSessionProcessor(options.db_user,
                                              options.db_name,
                                              options.rebuild)

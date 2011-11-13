@@ -3,10 +3,11 @@ from collections import defaultdict
 from database_session_processor import DatabaseSessionProcessor
 import utils
 
-class BytesSessionProcessor(DatabaseSessionProcessor):
+class ByteCountSessionProcessor(DatabaseSessionProcessor):
     states = dict(
             bytes_per_minute=(utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_port_per_minute=(utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_port_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
             bytes_per_domain_per_minute=\
                     (utils.initialize_int_dict, utils.sum_dicts),
             bytes_per_device_per_minute=\
@@ -19,7 +20,7 @@ class BytesSessionProcessor(DatabaseSessionProcessor):
             )
 
     def __init__(self, username, database, rebuild=False):
-        super(BytesSessionProcessor, self).__init__(username, database)
+        super(ByteCountSessionProcessor, self).__init__(username, database)
         if rebuild:
             self._oldest_timestamps = defaultdict(utils.initialize_min_timestamp)
         else:

@@ -1,6 +1,6 @@
 import re
 
-from session_computations import SessionProcessor
+from session_processor import SessionProcessor
 import utils
 
 class CorrelationSessionProcessor(SessionProcessor):

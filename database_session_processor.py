@@ -1,6 +1,6 @@
 from abc import abstractmethod, ABCMeta
 
-from session_computations import SessionProcessor
+from session_processor import SessionProcessor
 from database import BismarkPassiveDatabase
 
 class DatabaseSessionProcessor(SessionProcessor):
