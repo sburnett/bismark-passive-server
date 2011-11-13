@@ -1,8 +1,6 @@
 import psycopg2
 import psycopg2.extensions
 
-import pdb
-
 class BismarkPassiveDatabase(object):
     def __init__(self, user, database):
         self._conn = psycopg2.connect(user=user, database=database)
