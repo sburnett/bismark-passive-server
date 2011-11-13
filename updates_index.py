@@ -40,10 +40,12 @@ class UpdatesIndex(object):
     def sessions(self):
         cur = self._conn.execute('''SELECT DISTINCT
                                     node_id, anonymization_context, session_id
-                                    FROM updates''')
-        sessions = set()
+                                    FROM updates
+                                    GROUP BY node_id, anonymization_context, session_id
+                                    ORDER BY count(rowid) DESC''')
+        sessions = list()
         for row in cur:
-            sessions.add(Session(
+            sessions.append(Session(
                 node_id=row['node_id'],
                 anonymization_context=row['anonymization_context'],
                 id=row['session_id']))

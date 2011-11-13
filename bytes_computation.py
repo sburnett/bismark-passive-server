@@ -1,329 +1,167 @@
-from collections import defaultdict, namedtuple
-from datetime import datetime
-import re
+from collections import defaultdict
 
-import db
-from session_computations import \
-        SessionProcessor, SessionAggregator, merge_timeseries
+from database_session_processor import DatabaseSessionProcessor
+import utils
 
-class BytesSessionProcessor(SessionProcessor):
-    def __init__(self):
-        super(BytesSessionProcessor, self).__init__()
+class BytesSessionProcessor(DatabaseSessionProcessor):
+    states = dict(
+            bytes_per_minute=(utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_port_per_minute=(utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_domain_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_device_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_device_per_port_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_device_per_domain_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            packet_size_per_port=(utils.initialize_int_dict, utils.sum_dicts)
+            )
 
-        self._bytes_per_minute = defaultdict(int)
-        self._bytes_per_port_per_minute = defaultdict(int)
-        self._bytes_per_domain_per_minute = defaultdict(int)
-        self._bytes_per_device_per_minute = defaultdict(int)
-        self._bytes_per_device_per_port_per_minute = defaultdict(int)
-        self._bytes_per_device_per_domain_per_minute = defaultdict(int)
-        self._packet_size_per_port = defaultdict(int)
-
-        self._whitelist = set()
-        self._address_map = {}
-        self._mac_address_map = {}
-        self._flows = {}
-        self._flow_ip_map = defaultdict(set)
-        self._dns_map_ip = defaultdict(set)
-        self._dns_a_map_domain = defaultdict(list)
-
-    def process_flow(self, flow):
-        self._flows[flow.flow_id] = flow
-        if flow.source_ip in self._address_map \
-                and not flow.destination_ip_anonymized:
-            key = (self._address_map[flow.source_ip], flow.destination_ip)
-        elif flow.destination_ip in self._address_map \
-                and not flow.source_ip_anonymized:
-            key = (self._address_map[flow.destination_ip], flow.source_ip)
+    def __init__(self, username, database, rebuild=False):
+        super(BytesSessionProcessor, self).__init__(username, database)
+        if rebuild:
+            self._oldest_timestamps = defaultdict(utils.initialize_min_timestamp)
         else:
-            return
-        self._flow_ip_map[key]
-        if key in self._dns_map_ip:
-            self._flow_ip_map[key].update(self._dns_map_ip[key])
+            self._oldest_timestamps = defaultdict(utils.initialize_max_timestamp)
+    
+    def process_update(self, context, update):
+        for packet in update.packet_series:
+            self.process_packet(context, packet)
 
-    def process_a_record(self, a_record, a_packet):
-        if a_record.anonymized:
-            return
-        domain_key = (a_record.address_id, a_record.domain)
-        self._dns_a_map_domain[domain_key].append(a_record)
-        for domain, pattern in self._whitelist:
-            if pattern.search(a_record.domain) is not None:
-                ip_key = (a_record.address_id, a_record.ip_address)
-                domain_record = (domain,
-                                 a_packet.timestamp,
-                                 a_packet.timestamp + a_record.ttl)
-                self._dns_map_ip[ip_key].add(domain_record)
-                if ip_key in self._flow_ip_map:
-                    self._flow_ip_map[ip_key].add(domain_record)
+    def write_to_database(self, database, global_context):
+        database.import_bytes_per_minute(
+                global_context.bytes_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_port_per_minute(
+                global_context.bytes_per_port_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_domain_per_minute(
+                global_context.bytes_per_domain_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_device_per_minute(
+                global_context.bytes_per_device_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_device_per_port_per_minute(
+                global_context.bytes_per_device_per_port_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_device_per_domain_per_minute(
+                global_context.bytes_per_device_per_domain_per_minute,
+                self._oldest_timestamps)
+        database.refresh_matviews(self._oldest_timestamps)
+        database.import_size_statistics(global_context.packet_size_per_port)
 
-    def process_cname_record(self, cname_record, packet_series):
-        if cname_record.anonymized:
-            return
-        try:
-            cname_packet = packet_series[cname_record.packet_id]
-        except IndexError:
-            return
-        domain_key = (cname_record.address_id, cname_record.cname)
-        a_records = self._dns_a_map_domain.get(domain_key)
-        if a_records is None:
-            return
-        for domain, pattern in self._whitelist:
-            if pattern.search(cname_record.domain) is not None:
-                for a_record in a_records:
-                    try:
-                        a_packet = packet_series[a_record.packet_id]
-                    except IndexError:
-                        continue
-                    start_timestamp = max(cname_packet.timestamp,
-                                          a_packet.timestamp)
-                    end_timestamp = min(
-                            cname_packet.timestamp + cname_record.ttl,
-                            a_packet.timestamp + a_record.ttl)
-                    if start_timestamp > end_timestamp:
-                        continue
-                    ip_key = (a_record.address_id, a_record.ip_address)
-                    domain_record = (domain, start_timestamp, end_timestamp)
-                    self._dns_map_ip[ip_key].add(domain_record)
-                    if ip_key in self._flow_ip_map:
-                        self._flow_ip_map[ip_key].add(domain_record)
-
-    def process_packet(self, packet):
+    def process_packet(self, context, packet):
         rounded_timestamp = packet.timestamp.replace(second=0, microsecond=0)
-        self._bytes_per_minute[rounded_timestamp] += packet.size
+        context.bytes_per_minute[context.node_id, rounded_timestamp] += packet.size
 
-        flow = self._flows.get(packet.flow_id)
+        flow = context.flows.get(packet.flow_id)
         if flow is not None:
-            port_key = []
-            if flow.source_ip in self._address_map \
-                    and flow.destination_ip not in self._address_map:
-                port_key = (rounded_timestamp, flow.destination_port)
-                self._packet_size_per_port[flow.destination_port, packet.size] += 1
-            elif flow.destination_ip in self._address_map \
-                    and flow.source_ip not in self._address_map:
-                port_key = (rounded_timestamp, flow.source_port)
-                self._packet_size_per_port[flow.source_port, packet.size] += 1
+            if flow.source_ip in context.address_map \
+                    and flow.destination_ip not in context.address_map:
+                port_key = (context.node_id, rounded_timestamp, flow.destination_port)
+                context.packet_size_per_port[context.node_id,
+                                             flow.destination_port,
+                                             packet.size] += 1
+            elif flow.destination_ip in context.address_map \
+                    and flow.source_ip not in context.address_map:
+                port_key = (context.node_id, rounded_timestamp, flow.source_port)
+                context.packet_size_per_port[context.node_id,
+                                             flow.source_port,
+                                             packet.size] += 1
             else:
-                port_key = (rounded_timestamp, -1)
-            self._bytes_per_port_per_minute[port_key] += packet.size
+                port_key = (context.node_id, rounded_timestamp, -1)
+            context.bytes_per_port_per_minute[port_key] += packet.size
 
             device_keys = []
-            if flow.source_ip in self._mac_address_map:
-                device_keys.append((rounded_timestamp,
-                                    self._mac_address_map[flow.source_ip]))
-            if flow.destination_ip in self._mac_address_map:
+            if flow.source_ip in context.mac_address_map:
+                device_keys.append((context.node_id,
+                                    context.anonymization_id,
+                                    rounded_timestamp,
+                                    context.mac_address_map[flow.source_ip]))
+            if flow.destination_ip in context.mac_address_map:
                 device_keys.append(
-                        (rounded_timestamp,
-                         self._mac_address_map[flow.destination_ip]))
+                        (context.node_id,
+                         context.anonymization_id,
+                         rounded_timestamp,
+                         context.mac_address_map[flow.destination_ip]))
             if device_keys == []:
-                device_keys = [(rounded_timestamp, 'unknown')]
+                device_keys = [(context.node_id,
+                                context.anonymization_id,
+                                rounded_timestamp,
+                                'unknown')]
             for device_key in device_keys:
-                self._bytes_per_device_per_minute[device_key] += packet.size
+                context.bytes_per_device_per_minute[device_key] += packet.size
 
             for device_key in device_keys:
-                device_port_key = (rounded_timestamp,
-                                   device_key[1],
-                                   port_key[1])
-                self._bytes_per_device_per_port_per_minute[device_port_key] \
+                device_port_key = (context.node_id,
+                                   context.anonymization_id,
+                                   rounded_timestamp,
+                                   device_key[3],
+                                   port_key[2])
+                context.bytes_per_device_per_port_per_minute[device_port_key] \
                         += packet.size
 
             key = None
-            if flow.source_ip in self._address_map \
+            if flow.source_ip in context.address_map \
                     and not flow.destination_ip_anonymized:
-                key = (self._address_map[flow.source_ip], flow.destination_ip)
-            elif flow.destination_ip in self._address_map \
+                key = (context.address_map[flow.source_ip], flow.destination_ip)
+            elif flow.destination_ip in context.address_map \
                     and not flow.source_ip_anonymized:
-                key = (self._address_map[flow.destination_ip], flow.source_ip)
-            if key is not None and key in self._flow_ip_map:
-                for domain, start_time, end_time in self._flow_ip_map[key]:
+                key = (context.address_map[flow.destination_ip], flow.source_ip)
+            if key is not None and key in context.flow_ip_map:
+                for domain, start_time, end_time in context.flow_ip_map[key]:
                     if packet.timestamp < start_time \
                             or packet.timestamp > end_time:
                         continue
-                    domain_key = (rounded_timestamp, domain)
-                    self._bytes_per_domain_per_minute[domain_key] \
+                    domain_key = (context.node_id, rounded_timestamp, domain)
+                    context.bytes_per_domain_per_minute[domain_key] \
                             += packet.size
-                    device_domain_key = (rounded_timestamp,
-                                         device_key[1],
+                    device_domain_key = (context.node_id,
+                                         context.anonymization_id,
+                                         rounded_timestamp,
+                                         device_key[3],
                                          domain)
-                    self._bytes_per_device_per_domain_per_minute[
+                    context.bytes_per_device_per_domain_per_minute[
                             device_domain_key] += packet.size
             else:
-                domain_key = (rounded_timestamp, 'unknown')
-                self._bytes_per_domain_per_minute[domain_key] += packet.size
+                domain_key = (context.node_id, rounded_timestamp, 'unknown')
+                context.bytes_per_domain_per_minute[domain_key] += packet.size
                 device_domain_key \
-                        = (rounded_timestamp, device_key[1], 'unknown')
-                self._bytes_per_device_per_domain_per_minute[
+                        = (context.node_id,
+                                context.anonymization_id,
+                                rounded_timestamp,
+                                device_key[3],
+                                'unknown')
+                context.bytes_per_device_per_domain_per_minute[
                         device_domain_key] += packet.size
         else:
-            self._bytes_per_port_per_minute[rounded_timestamp, -1] \
-                    += packet.size
-            self._bytes_per_domain_per_minute[rounded_timestamp, 'unknown'] \
-                    += packet.size
-            self._bytes_per_device_per_minute[rounded_timestamp, 'unknown'] \
-                    += packet.size
-            self._bytes_per_device_per_port_per_minute[
-                    rounded_timestamp, 'unknown', -1] != packet.size
-            self._bytes_per_device_per_domain_per_minute[
-                    rounded_timestamp, 'unknown', 'unknown'] != packet.size
+            context.bytes_per_port_per_minute[
+                    context.node_id, rounded_timestamp, -1] += packet.size
+            context.bytes_per_domain_per_minute[context.node_id,
+                                                rounded_timestamp,
+                                                'unknown'] += packet.size
+            context.bytes_per_device_per_minute[context.node_id,
+                                                context.anonymization_id,
+                                                rounded_timestamp,
+                                                'unknown'] += packet.size
+            context.bytes_per_device_per_port_per_minute[
+                    context.node_id,
+                    context.anonymization_id,
+                    rounded_timestamp,
+                    'unknown',
+                    -1] != packet.size
+            context.bytes_per_device_per_domain_per_minute[
+                    context.node_id,
+                    context.anonymization_id,
+                    rounded_timestamp,
+                    'unknown',
+                    'unknown'] != packet.size
 
-        return rounded_timestamp
-
-    def process_update(self, update):
-        for domain in update.whitelist:
-            self._whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))
-
-        for offset, address in enumerate(update.addresses):
-            index = (update.address_table_first_id + offset) \
-                    % update.address_table_size
-            self._address_map[address.ip_address] = index
-            self._mac_address_map[address.ip_address] = address.mac_address
-
-        for flow in update.flow_table:
-            self.process_flow(flow)
-
-        for a_record in update.a_records:
-            try:
-                a_packet = update.packet_series[a_record.packet_id]
-            except IndexError:
-                continue
-            self.process_a_record(a_record, a_packet)
-
-        for cname_record in update.cname_records:
-            self.process_cname_record(cname_record, update.packet_series)
-
-        oldest_timestamp = datetime.max
-        for packet in update.packet_series:
-            current_timestamp = self.process_packet(packet)
-            oldest_timestamp = min(oldest_timestamp, current_timestamp)
-        return oldest_timestamp
-
-    @property
-    def results(self):
-        return { 'bytes_per_minute': self._bytes_per_minute,
-                 'bytes_per_port_per_minute': self._bytes_per_port_per_minute,
-                 'bytes_per_domain_per_minute': \
-                         self._bytes_per_domain_per_minute,
-                 'bytes_per_device_per_minute': \
-                         self._bytes_per_device_per_minute,
-                 'bytes_per_device_per_port_per_minute': \
-                         self._bytes_per_device_per_port_per_minute,
-                 'bytes_per_device_per_domain_per_minute': \
-                         self._bytes_per_device_per_domain_per_minute,
-                 'packet_size_per_port': \
-                         self._packet_size_per_port }
-
-    def augment_session_result(self, session_result, update_result):
-        if session_result is None:
-            return update_result
-        else:
-            return min(update_result, session_result)
-
-class BytesSessionAggregator(SessionAggregator):
-    ResultsRecord = namedtuple('ResultsRecord',
-                               ['bytes_per_minute',
-                                'bytes_per_port_per_minute',
-                                'bytes_per_domain_per_minute',
-                                'packet_size_per_port',
-                                'packet_count_per_port'])
-    ContextResultsRecord = namedtuple(
-            'ContextResultsRecord',
-            ['bytes_per_device_per_minute',
-             'bytes_per_device_per_port_per_minute',
-             'bytes_per_device_per_domain_per_minute'])
-
-    def __init__(self, username, database, rebuild=False):
-        super(BytesSessionAggregator, self).__init__()
-
-        self._username = username
-        self._database = database
-        self._rebuild = rebuild
-
-        self._node_statistics = defaultdict(lambda:
-                self.ResultsRecord(
-                    bytes_per_minute=defaultdict(int),
-                    bytes_per_port_per_minute=defaultdict(int),
-                    bytes_per_domain_per_minute=defaultdict(int),
-                    packet_size_per_port=defaultdict(int),
-                    packet_count_per_port=defaultdict(int)))
-        self._context_statistics = defaultdict(lambda:
-                self.ContextResultsRecord(
-                    bytes_per_device_per_minute=defaultdict(int),
-                    bytes_per_device_per_port_per_minute=defaultdict(int),
-                    bytes_per_device_per_domain_per_minute=defaultdict(int)))
-        self._records_updated = set()
-        self._oldest_timestamps = defaultdict(lambda: datetime.max)
-
-    def augment_results(self,
-                        node_id,
-                        anonymization_id,
-                        session_id,
-                        results,
-                        updated,
-                        process_result):
-        merge_timeseries(results['bytes_per_minute'],
-                         self._node_statistics[node_id]\
-                                 .bytes_per_minute)
-        merge_timeseries(results['bytes_per_port_per_minute'],
-                         self._node_statistics[node_id]\
-                                 .bytes_per_port_per_minute)
-        merge_timeseries(results['bytes_per_domain_per_minute'],
-                         self._node_statistics[node_id]\
-                                 .bytes_per_domain_per_minute)
-        merge_timeseries(results['packet_size_per_port'],
-                         self._node_statistics[node_id]\
-                                 .packet_size_per_port)
-        merge_timeseries(results['bytes_per_device_per_minute'],
-                         self._context_statistics[node_id, anonymization_id]\
-                                 .bytes_per_device_per_minute)
-        merge_timeseries(
-                results['bytes_per_device_per_port_per_minute'],
-                self._context_statistics[node_id, anonymization_id]\
-                        .bytes_per_device_per_port_per_minute)
-        merge_timeseries(
-                results['bytes_per_device_per_domain_per_minute'],
-                self._context_statistics[node_id, anonymization_id]\
-                        .bytes_per_device_per_domain_per_minute)
-        if updated:
-            self._records_updated.add(node_id)
-            context_key = (node_id, anonymization_id)
-            self._records_updated.add(context_key)
-            if process_result is not None:
-                self._oldest_timestamps[node_id] \
-                        = min(self._oldest_timestamps[node_id], process_result)
-                self._oldest_timestamps[context_key] \
-                        = min(self._oldest_timestamps[context_key], process_result)
-
-    def store_results(self):
-        database = db.BismarkPassiveDatabase(self._username, self._database)
-        print 'Writing per-node tables'
-        for node_id, record in self._node_statistics.items():
-            print ' ', node_id
-            if node_id in self._records_updated or self._rebuild:
-                if self._rebuild:
-                    oldest_timestamp = datetime.min
-                else:
-                    oldest_timestamp = self._oldest_timestamps.get(node_id)
-                database.import_node_byte_statistics(
-                        node_id,
-                        oldest_timestamp,
-                        record.bytes_per_minute,
-                        record.bytes_per_port_per_minute,
-                        record.bytes_per_domain_per_minute)
-                database.import_size_statistics(
-                        node_id,
-                        record.packet_size_per_port)
-        print 'Writing per-node-and-context tables'
-        for (node_id, anonymization_context), record \
-                in self._context_statistics.items():
-            print ' ', node_id, anonymization_context
-            context_key = (node_id, anonymization_context)
-            if context_key in self._records_updated or self._rebuild:
-                if self._rebuild:
-                    oldest_timestamp = datetime.min
-                else:
-                    oldest_timestamp = self._oldest_timestamps.get(context_key)
-                database.import_context_byte_statistics(
-                        node_id,
-                        anonymization_context,
-                        oldest_timestamp,
-                        record.bytes_per_device_per_minute,
-                        record.bytes_per_device_per_port_per_minute,
-                        record.bytes_per_device_per_domain_per_minute)
+        self._oldest_timestamps[context.node_id] \
+                = min(self._oldest_timestamps[context.node_id],
+                      rounded_timestamp)
+        context_key = context.node_id, context.anonymization_id
+        self._oldest_timestamps[context_key] \
+                = min(self._oldest_timestamps[context_key],
+                      rounded_timestamp)

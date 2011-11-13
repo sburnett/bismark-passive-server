@@ -13,23 +13,20 @@ from updates_index import UpdatesIndex
 def index_traces(updates_directory, index_filename):
     index = UpdatesIndex(index_filename)
     tarnames_processed = index.tarnames
+    new_tarnames = []
     for tarname in glob(join(updates_directory, '*.tar')):
         if basename(tarname) not in tarnames_processed:
-            print 'Indexing', tarname,
             try:
                 true_sum = splitext(basename(tarname))[0].split('_')[3]
                 hasher = md5()
                 hasher.update(open(tarname, 'r').read())
                 if hasher.hexdigest() != true_sum:
-                    print '(invalid hash)'
+                    print 'skipping', tarname, '(invalid hash)'
                     continue
-                else:
-                    print '(valid hash)'
             except:
-                print
+                pass
             tarball = tarfile.open(tarname, 'r')
             for tarmember in tarball.getmembers():
-                print ' ', tarmember.name
                 tarhandle = tarball.extractfile(tarmember.name)
                 update_content = GzipFile(fileobj=tarhandle).read()
                 update = PassiveUpdate(update_content, onlyheaders=True)
@@ -43,3 +40,5 @@ def index_traces(updates_directory, index_filename):
                             signature,
                             update.creation_time,
                             update.sequence_number)
+            new_tarnames.append(tarname)
+    return new_tarnames

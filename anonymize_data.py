@@ -11,12 +11,7 @@ import tarfile
 
 def md5sum(filename):
     m = md5()
-    file = open(filename)
-    while True:
-        data = file.read(128)
-        if not data:
-            break
-        m.update(data)
+    m.update(open(filename, 'r').read())
     return m.hexdigest()
 
 def anonymize_update(tarfilename, destination_directory):
@@ -41,22 +36,18 @@ def anonymize_update(tarfilename, destination_directory):
         # get the .gz file
         tarhandle = tarball.extractfile(tarmember.name)
         logfile = GzipFile(fileobj=tarhandle)
-        outlogfile = StringIO.StringIO()
-        for line in logfile:
-            if line.strip() == 'UNANONYMIZED':
-                continue
-            if router_id in line:
-                outlogfile.write(line.replace(router_id, hashed_router_id))
-            else:
-                outlogfile.write(line)
-        outlogfile.seek(0) 
-
-        # another buffer to write the .gz version of above log file
         outtarbuffer = StringIO.StringIO()
         outtarhandle = GzipFile(mode='w', fileobj=outtarbuffer)
+        unanonymized = False
+        for line in logfile:
+            if line.startswith('UNANONYMIZED'):
+                unanonymized = True
+                break
+            outtarhandle.write(line.replace(router_id, hashed_router_id))
+        if unanonymized:
+            continue
 
         # write compressed lines to the .gz file
-        outtarhandle.writelines(outlogfile)
         outtarhandle.close()
         outtarsize = outtarbuffer.tell() # size of the final buffer
         outtarbuffer.seek(0)
@@ -80,16 +71,3 @@ def anonymize_update(tarfilename, destination_directory):
                                     new_md5checksum)
     os.rename(os.path.join(destination_directory, output_tarfilename),
               os.path.join(destination_directory, final_filename))
-
-def main():
-    if len(sys.argv) != 3:
-        print 'usage: %s <raw traces directory> <anonymized traces directory>'
-        sys.exit(1)
-    source_directory = sys.argv[1]
-    destination_directory = sys.argv[2]
-    for filename in glob.glob(os.path.join(source_directory, '*.tar')):
-        print filename
-        anonymize_update(filename, destination_directory)
-
-if __name__ == '__main__':
-    main()
