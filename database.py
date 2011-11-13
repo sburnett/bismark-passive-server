@@ -101,7 +101,7 @@ class BismarkPassiveDatabase(object):
                 (node_id, anonymization_id) = key
                 cur.callproc('refresh_matviews_context_latest',
                              (node_id, anonymization_id, oldest_timestamp))
-            elif isinstance(key, str):
+            elif not isinstance(key, tuple):
                 cur.callproc('refresh_matviews_node_latest',
                              (key, oldest_timestamp))
             else:

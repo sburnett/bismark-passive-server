@@ -10,6 +10,7 @@ from anonymize_data import anonymize_update
 from byte_count_processor import ByteCountSessionProcessor
 from correlation_processor import CorrelationSessionProcessor
 from index_traces import index_traces
+from packet_size_processor import PacketSizeProcessor
 from session_context import GlobalContext, SessionContextManager
 from update_parser import PassiveUpdate
 from update_statistics_processor import UpdateStatisticsSessionProcessor
@@ -132,7 +133,9 @@ def main():
                                       options.rebuild),
             UpdateStatisticsSessionProcessor(options.db_user,
                                              options.db_name,
-                                             options.rebuild)
+                                             options.rebuild),
+            PacketSizeProcessor(options.db_user,
+                                options.db_name)
             ]
     if not options.disable_refresh:
         print 'Indexing new updates'

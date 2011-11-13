@@ -16,7 +16,6 @@ class ByteCountSessionProcessor(DatabaseSessionProcessor):
                     (utils.initialize_int_dict, utils.sum_dicts),
             bytes_per_device_per_domain_per_minute=\
                     (utils.initialize_int_dict, utils.sum_dicts),
-            packet_size_per_port=(utils.initialize_int_dict, utils.sum_dicts)
             )
 
     def __init__(self, username, database, rebuild=False):
@@ -50,7 +49,6 @@ class ByteCountSessionProcessor(DatabaseSessionProcessor):
                 global_context.bytes_per_device_per_domain_per_minute,
                 self._oldest_timestamps)
         database.refresh_matviews(self._oldest_timestamps)
-        database.import_size_statistics(global_context.packet_size_per_port)
 
     def process_packet(self, context, packet):
         rounded_timestamp = packet.timestamp.replace(second=0, microsecond=0)
@@ -61,15 +59,9 @@ class ByteCountSessionProcessor(DatabaseSessionProcessor):
             if flow.source_ip in context.address_map \
                     and flow.destination_ip not in context.address_map:
                 port_key = (context.node_id, rounded_timestamp, flow.destination_port)
-                context.packet_size_per_port[context.node_id,
-                                             flow.destination_port,
-                                             packet.size] += 1
             elif flow.destination_ip in context.address_map \
                     and flow.source_ip not in context.address_map:
                 port_key = (context.node_id, rounded_timestamp, flow.source_port)
-                context.packet_size_per_port[context.node_id,
-                                             flow.source_port,
-                                             packet.size] += 1
             else:
                 port_key = (context.node_id, rounded_timestamp, -1)
             context.bytes_per_port_per_minute[port_key] += packet.size
