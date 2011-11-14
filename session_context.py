@@ -1,3 +1,4 @@
+import copy
 import cPickle
 import gzip
 from os.path import join
@@ -26,13 +27,21 @@ class GlobalContext(object):
 class SessionContextManager(object):
     def __init__(self):
         self._names = set()
+        self._ephemeral_names = set()
         self._initializers = dict()
         self._mergers = dict()
 
-    def declare_state(self, name, init_func, merge_func):
+    def declare_persistent_state(self, name, init_func, merge_func):
+        self._declare_state(name, True, init_func, merge_func)
+    def declare_ephemeral_state(self, name, init_func, merge_func):
+        self._declare_state(name, False, init_func, merge_func)
+
+    def _declare_state(self, name, persistent, init_func, merge_func):
         if name in self._names:
             raise ValueError('Context state has already been declared')
         self._names.add(name)
+        if not persistent:
+            self._ephemeral_names.add(name)
         self._initializers[name] = init_func
         self._mergers[name] = merge_func
 
@@ -48,12 +57,15 @@ class SessionContextManager(object):
         except:
             return None
         for name, initialize in self._initializers.iteritems():
-            if not hasattr(context, name):
+            if not hasattr(context, name) or name in self._ephemeral_names:
                 setattr(context, name, initialize())
         return context
 
     def save_context(self, context, filename):
-        cPickle.dump(context, open(filename, 'wb'), 2)
+        copied_context = copy.copy(context)
+        for name in self._ephemeral_names:
+            delattr(copied_context, name)
+        cPickle.dump(copied_context, open(filename, 'wb'), 2)
 
     def merge_contexts(self, session_context, global_context):
         for name, merger in self._mergers.iteritems():

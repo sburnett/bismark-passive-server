@@ -27,10 +27,11 @@ class PacketSizeSessionProcessor(SessionProcessor):
                                              packet.size] += 1
 
 class PacketSizeProcessorCoordinator(DatabaseProcessorCoordinator):
-    states = dict(
+    persistent_state = dict(
             packet_size_per_port=\
                     (utils.initialize_int_dict, utils.sum_dicts)
             )
+    ephemeral_state = dict()
 
     def __init__(self, username, database):
         super(PacketSizeProcessorCoordinator, self).__init__(username, database)

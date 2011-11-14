@@ -92,7 +92,7 @@ class CorrelationSessionProcessor(SessionProcessor):
                         context.flow_ip_map[ip_key].add(domain_record)
 
 class CorrelationProcessorCoordinator(ProcessorCoordinator):
-    states = dict(
+    persistent_state = dict(
             whitelist=(set, None),
             address_map=(dict, None),
             mac_address_map=(dict, None),
@@ -101,6 +101,7 @@ class CorrelationProcessorCoordinator(ProcessorCoordinator):
             dns_map_ip=(utils.initialize_set_dict, None),
             dns_a_map_domain=(utils.initialize_list_dict, None)
             )
+    ephemeral_state = dict()
 
     def __init__(self):
         super(CorrelationProcessorCoordinator, self).__init__()

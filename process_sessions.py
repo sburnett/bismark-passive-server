@@ -75,12 +75,19 @@ def process_sessions(coordinators,
                      pickle_root,
                      num_workers):
     session_context_manager = SessionContextManager()
-    session_context_manager.declare_state('filenames_processed', set, None)
-    session_context_manager.declare_state(
+    session_context_manager.declare_persistent_state(
+            'filenames_processed', set, None)
+    session_context_manager.declare_persistent_state(
             'last_sequence_number_processed', return_negative_one, None)
     for coordinator in coordinators:
-        for name, (init_func, merge_func) in coordinator.states.iteritems():
-            session_context_manager.declare_state(name, init_func, merge_func)
+        for name, (init_func, merge_func) \
+                in coordinator.persistent_state.iteritems():
+            session_context_manager.declare_persistent_state(
+                    name, init_func, merge_func)
+        for name, (init_func, merge_func) \
+                in coordinator.ephemeral_state.iteritems():
+            session_context_manager.declare_ephemeral_state(
+                    name, init_func, merge_func)
 
     pool = multiprocessing.Pool(processes=num_workers)
     results = []
@@ -99,13 +106,12 @@ def process_sessions(coordinators,
                      processors,
                      update_files,
                      updates_directory))
-    
-    print 'Waiting for results'
     global_context = GlobalContext()
     for session_context in pool.imap_unordered(process_session, args):
-        print 'Got result'
         session_context_manager.merge_contexts(session_context, global_context)
-        print 'Done processing result'
+    pool.close()
+    pool.join()
+
     print 'Finishing'
     for coordinator in coordinators:
         coordinator.finished_processing(global_context)
