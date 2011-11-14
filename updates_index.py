@@ -13,7 +13,8 @@ class UpdatesIndex(object):
                                node_id text,
                                anonymization_context text,
                                session_id integer,
-                               sequence_number integer)''')
+                               sequence_number integer,
+                               length_in_bytes integer)''')
         self._conn.execute('''CREATE INDEX IF NOT EXISTS
                               data_index ON updates (node_id, session_id)''')
         self._conn.commit()
@@ -33,8 +34,9 @@ class UpdatesIndex(object):
                                node_id,
                                anonymization_context,
                                session_id,
-                               sequence_number)
-                              VALUES (?, ?, ?, ?, ?, ?)''', args)
+                               sequence_number,
+                               length_in_bytes)
+                              VALUES (?, ?, ?, ?, ?, ?, ?)''', args)
 
     @property
     def sessions(self):
@@ -42,7 +44,7 @@ class UpdatesIndex(object):
                                     node_id, anonymization_context, session_id
                                     FROM updates
                                     GROUP BY node_id, anonymization_context, session_id
-                                    ORDER BY count(rowid) DESC''')
+                                    ORDER BY sum(length_in_bytes) DESC''')
         sessions = list()
         for row in cur:
             sessions.append(Session(

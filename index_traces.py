@@ -39,6 +39,7 @@ def index_traces(updates_directory, index_filename):
                             update.bismark_id,
                             signature,
                             update.creation_time,
-                            update.sequence_number)
+                            update.sequence_number,
+                            len(update_content))
             new_tarnames.append(tarname)
     return new_tarnames

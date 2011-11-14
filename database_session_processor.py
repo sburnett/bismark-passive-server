@@ -1,13 +1,13 @@
 from abc import abstractmethod, ABCMeta
 
-from session_processor import SessionProcessor
+from session_processor import ProcessorCoordinator
 from database import BismarkPassiveDatabase
 
-class DatabaseSessionProcessor(SessionProcessor):
+class DatabaseProcessorCoordinator(ProcessorCoordinator):
     __metaclass__ = ABCMeta
 
     def __init__(self, username, database):
-        super(DatabaseSessionProcessor, self).__init__()
+        super(DatabaseProcessorCoordinator, self).__init__()
         self._username = username
         self._database = database
 

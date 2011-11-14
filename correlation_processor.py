@@ -1,19 +1,9 @@
 import re
 
-from session_processor import SessionProcessor
+from session_processor import ProcessorCoordinator, SessionProcessor
 import utils
 
 class CorrelationSessionProcessor(SessionProcessor):
-    states = dict(
-            whitelist=(set, None),
-            address_map=(dict, None),
-            mac_address_map=(dict, None),
-            flows=(dict, None),
-            flow_ip_map=(utils.initialize_set_dict, None),
-            dns_map_ip=(utils.initialize_set_dict, None),
-            dns_a_map_domain=(utils.initialize_list_dict, None)
-            )
-
     def __init__(self):
         super(CorrelationSessionProcessor, self).__init__()
 
@@ -100,3 +90,20 @@ class CorrelationSessionProcessor(SessionProcessor):
                     context.dns_map_ip[ip_key].add(domain_record)
                     if ip_key in context.flow_ip_map:
                         context.flow_ip_map[ip_key].add(domain_record)
+
+class CorrelationProcessorCoordinator(ProcessorCoordinator):
+    states = dict(
+            whitelist=(set, None),
+            address_map=(dict, None),
+            mac_address_map=(dict, None),
+            flows=(dict, None),
+            flow_ip_map=(utils.initialize_set_dict, None),
+            dns_map_ip=(utils.initialize_set_dict, None),
+            dns_a_map_domain=(utils.initialize_list_dict, None)
+            )
+
+    def __init__(self):
+        super(CorrelationProcessorCoordinator, self).__init__()
+
+    def create_processor(self, session):
+        return CorrelationSessionProcessor()

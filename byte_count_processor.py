@@ -1,54 +1,24 @@
 from collections import defaultdict
+from datetime import datetime
+import multiprocessing
 
-from database_session_processor import DatabaseSessionProcessor
+from database_session_processor import DatabaseProcessorCoordinator
+from session_processor import SessionProcessor
 import utils
 
-class ByteCountSessionProcessor(DatabaseSessionProcessor):
-    states = dict(
-            bytes_per_minute=(utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_port_per_minute=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_domain_per_minute=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_device_per_minute=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_device_per_port_per_minute=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_device_per_domain_per_minute=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            )
-
-    def __init__(self, username, database, rebuild=False):
-        super(ByteCountSessionProcessor, self).__init__(username, database)
-        if rebuild:
-            self._oldest_timestamps = defaultdict(utils.initialize_min_timestamp)
-        else:
-            self._oldest_timestamps = defaultdict(utils.initialize_max_timestamp)
+class ByteCountSessionProcessor(SessionProcessor):
+    def __init__(self, fingerprint, timestamp_queue):
+        super(ByteCountSessionProcessor, self).__init__()
+        self._oldest_timestamp = datetime.max
+        self._fingerprint = fingerprint
+        self._timestamp_queue = timestamp_queue
     
     def process_update(self, context, update):
         for packet in update.packet_series:
             self.process_packet(context, packet)
 
-    def write_to_database(self, database, global_context):
-        database.import_bytes_per_minute(
-                global_context.bytes_per_minute,
-                self._oldest_timestamps)
-        database.import_bytes_per_port_per_minute(
-                global_context.bytes_per_port_per_minute,
-                self._oldest_timestamps)
-        database.import_bytes_per_domain_per_minute(
-                global_context.bytes_per_domain_per_minute,
-                self._oldest_timestamps)
-        database.import_bytes_per_device_per_minute(
-                global_context.bytes_per_device_per_minute,
-                self._oldest_timestamps)
-        database.import_bytes_per_device_per_port_per_minute(
-                global_context.bytes_per_device_per_port_per_minute,
-                self._oldest_timestamps)
-        database.import_bytes_per_device_per_domain_per_minute(
-                global_context.bytes_per_device_per_domain_per_minute,
-                self._oldest_timestamps)
-        database.refresh_matviews(self._oldest_timestamps)
+    def finished_session(self):
+        self._timestamp_queue.put((self._fingerprint, self._oldest_timestamp))
 
     def process_packet(self, context, packet):
         rounded_timestamp = packet.timestamp.replace(second=0, microsecond=0)
@@ -151,10 +121,73 @@ class ByteCountSessionProcessor(DatabaseSessionProcessor):
                     'unknown',
                     'unknown'] != packet.size
 
-        self._oldest_timestamps[context.node_id] \
-                = min(self._oldest_timestamps[context.node_id],
-                      rounded_timestamp)
-        context_key = context.node_id, context.anonymization_id
-        self._oldest_timestamps[context_key] \
-                = min(self._oldest_timestamps[context_key],
-                      rounded_timestamp)
+        self._oldest_timestamp = min(self._oldest_timestamp, rounded_timestamp)
+
+class ByteCountProcessorCoordinator(DatabaseProcessorCoordinator):
+    states = dict(
+            bytes_per_minute=(utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_port_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_domain_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_device_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_device_per_port_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            bytes_per_device_per_domain_per_minute=\
+                    (utils.initialize_int_dict, utils.sum_dicts),
+            )
+
+    def __init__(self, username, database, rebuild=False):
+        super(ByteCountProcessorCoordinator, self).__init__(username, database)
+        self._rebuild = rebuild
+        if rebuild:
+            self._oldest_timestamps = defaultdict(lambda: datetime.min)
+        else:
+            self._oldest_timestamps = defaultdict(lambda: datetime.max)
+        manager = multiprocessing.Manager()
+        self._timestamp_queue = manager.Queue()
+        self._num_processors = 0
+
+    def create_processor(self, session):
+        self._num_processors += 1
+        return ByteCountSessionProcessor((session.node_id,
+                                          session.anonymization_context),
+                                         self._timestamp_queue)
+    
+    def finished_processing(self, global_context):
+        while self._num_processors > 0:
+            (node_id, anonymization_id), oldest_timestamp \
+                    = self._timestamp_queue.get()
+            self._num_processors -= 1
+
+            self._oldest_timestamps[node_id] \
+                    = min(self._oldest_timestamps[node_id], oldest_timestamp)
+            context_key = node_id, anonymization_id
+            self._oldest_timestamps[context_key] \
+                    = min(self._oldest_timestamps[context_key],
+                          oldest_timestamp)
+        super(ByteCountProcessorCoordinator, self)\
+                .finished_processing(global_context)
+
+    def write_to_database(self, database, global_context):
+        print 'Oldest timestamps:', self._oldest_timestamps
+        database.import_bytes_per_minute(
+                global_context.bytes_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_port_per_minute(
+                global_context.bytes_per_port_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_domain_per_minute(
+                global_context.bytes_per_domain_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_device_per_minute(
+                global_context.bytes_per_device_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_device_per_port_per_minute(
+                global_context.bytes_per_device_per_port_per_minute,
+                self._oldest_timestamps)
+        database.import_bytes_per_device_per_domain_per_minute(
+                global_context.bytes_per_device_per_domain_per_minute,
+                self._oldest_timestamps)
+        database.refresh_matviews(self._oldest_timestamps)

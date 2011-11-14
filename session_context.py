@@ -38,14 +38,17 @@ class SessionContextManager(object):
 
     def create_context(self, node_id, anonymization_id, session_id):
         context = SessionContext(node_id, anonymization_id, session_id)
-        for name, initialize in self._initializers.items():
+        for name, initialize in self._initializers.iteritems():
             setattr(context, name, initialize())
         return context
 
     def load_context(self, filename):
-        context = cPickle.load(open(filename, 'rb'))
-        for name, initialize in self._initializers.items():
-            if name not in initial_values:
+        try:
+            context = cPickle.load(open(filename, 'rb'))
+        except:
+            return None
+        for name, initialize in self._initializers.iteritems():
+            if not hasattr(context, name):
                 setattr(context, name, initialize())
         return context
 
@@ -53,7 +56,7 @@ class SessionContextManager(object):
         cPickle.dump(context, open(filename, 'wb'), 2)
 
     def merge_contexts(self, session_context, global_context):
-        for name, merger in self._mergers.items():
+        for name, merger in self._mergers.iteritems():
             if merger is not None:
                 if not hasattr(global_context, name):
                     setattr(global_context, name, self._initializers[name]())

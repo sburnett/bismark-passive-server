@@ -15,7 +15,7 @@ def update_dict(first, second):
     second.update(first)
     return second
 def sum_dicts(first, second):
-    for key, value in first.items():
+    for key, value in first.iteritems():
         second[key] += value
     return second
 def return_negative_one():
