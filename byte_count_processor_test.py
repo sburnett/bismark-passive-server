@@ -1,8 +1,11 @@
-from bytes_computation import BytesSessionProcessor
+from byte_count_processor import ByteCountSessionProcessor
+from correlation_processor import CorrelationSessionProcessor
 
 from datetime import datetime, timedelta
-import update_parser
 import unittest
+
+from session_context import SessionContext
+import update_parser
 
 class MockPassiveUpdate(object):
     def __init__(self,
@@ -55,12 +58,13 @@ class TestBytesSessionProcessor(unittest.TestCase):
                         size=2,
                         flow_id=-2) ]
         update = MockPassiveUpdate(packets)
-        processor = BytesSessionProcessor()
-        processor.process_update(update)
+        context = SessionContext('node_id', 'anonymization_id', 'session_id')
+        CorrelationSessionProcessor().process_update(context, update)
+        ByteCountSessionProcessor().process_update(context, update)
 
         bytes_per_minute = processor.results['bytes_per_minute']
-        self.assertTrue(bytes_per_minute[datetime(1970, 1, 1)] == 35)
-        self.assertTrue(len(bytes_per_minute) == 1)
+        self.assertTrue(context.bytes_per_minute['node_id', datetime(1970, 1, 1)] == 35)
+        self.assertTrue(len(context.bytes_per_minute) == 2)
 
     def test_bytes_minute(self):
         timestamp = datetime(1970, 1, 1, 0, 0, 0)
