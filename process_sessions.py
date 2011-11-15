@@ -2,19 +2,14 @@
 
 from gzip import GzipFile
 from multiprocessing import Pool
-from optparse import OptionParser
 from os import getpid, makedirs
 from os.path import join
 from shutil import rmtree
 import tarfile
 
-from byte_count_processor import ByteCountProcessorCoordinator
-from correlation_processor import CorrelationProcessorCoordinator
 from index_traces import index_traces
-from packet_size_processor import PacketSizeProcessorCoordinator
 from session_context import GlobalContext, SessionContextManager
 from update_parser import PassiveUpdate
-from update_statistics_processor import UpdateStatisticsProcessorCoordinator
 from updates_index import UpdatesIndex
 from utils import return_negative_one
 
@@ -68,12 +63,12 @@ def process_session_wrapper(args):
     del args
     return results_pickle_path
 
-def process_sessions(coordinators,
-                     updates_directory,
-                     index_filename,
-                     pickle_root,
-                     result_pickle_root,
-                     num_workers):
+def process_sessions_real(coordinators,
+                          updates_directory,
+                          index_filename,
+                          pickle_root,
+                          result_pickle_root,
+                          num_workers=None):
     session_context_manager = SessionContextManager()
     session_context_manager.declare_persistent_state(
             'filenames_processed', set, None)
@@ -120,60 +115,22 @@ def process_sessions(coordinators,
     for coordinator in coordinators:
         coordinator.finished_processing(global_context)
 
-def parse_args():
-    usage = 'usage: %prog [options]' \
-            ' updates_directory index_filename pickle_directory'
-    parser = OptionParser(usage=usage)
-    parser.add_option('-u', '--username', action='store', dest='db_user',
-                      default='sburnett', help='Database username')
-    parser.add_option('-d', '--database', action='store', dest='db_name',
-                      default='bismark_openwrt_live_v0_1',
-                      help='Database name')
-    parser.add_option('-t', '--temp-pickles-dir', action='store',
-                      dest='temp_pickles_dir', default='/dev/shm',
-                      help='Directory for temporary runtime pickle storage')
-    parser.add_option('-w', '--workers', type='int', action='store',
-                      dest='workers', default=8,
-                      help='Maximum number of worker threads to use')
-    parser.add_option('-n', '--disable-refresh', action='store_true',
-                      dest='disable_refresh', default=False,
-                      help='Disable refresh of index before processing')
-    parser.add_option('-r', '--rebuild', action='store_true',
-                      dest='rebuild', default=False,
-                      help='Rebuild database from scratch (advanced)')
-    options, args = parser.parse_args()
-    if len(args) != 3:
-        parser.error('Missing required option')
-    mandatory = { 'updates_directory': args[0],
-                  'index_filename': args[1],
-                  'pickle_directory': args[2] }
-    return options, mandatory
-
-def main():
-    (options, args) = parse_args()
-    coordinators = [
-            CorrelationProcessorCoordinator(),
-            ByteCountProcessorCoordinator(options.db_user,
-                                          options.db_name,
-                                          options.rebuild),
-            UpdateStatisticsProcessorCoordinator(options.db_user,
-                                                 options.db_name,
-                                                 options.rebuild),
-            PacketSizeProcessorCoordinator(options.db_user,
-                                           options.db_name)
-            ]
-    if not options.disable_refresh:
+def process_sessions(coordinators,
+                     updates_directory,
+                     index_filename,
+                     pickle_root,
+                     temp_pickles_dir='/dev/shm',
+                     num_workers=None,
+                     refresh_index=True):
+    if refresh_index:
         print 'Indexing new updates'
-        index_traces(args['updates_directory'], args['index_filename'])
-    result_pickle_root = join(options.temp_pickles_dir, str(getpid()))
+        index_traces(updates_directory, index_filename)
+    result_pickle_root = join(temp_pickles_dir, str(getpid()))
     makedirs(result_pickle_root)
-    process_sessions(coordinators,
-                     args['updates_directory'],
-                     args['index_filename'],
-                     args['pickle_directory'],
-                     result_pickle_root,
-                     options.workers)
+    process_sessions_real(coordinators,
+                          updates_directory,
+                          index_filename,
+                          pickle_root,
+                          result_pickle_root,
+                          num_workers)
     rmtree(result_pickle_root)
-
-if __name__ == '__main__':
-    main()
