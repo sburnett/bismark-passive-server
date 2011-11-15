@@ -1,7 +1,5 @@
-from collections import defaultdict, namedtuple
-from datetime import datetime
+from collections import namedtuple
 
-import database
 from database_session_processor import DatabaseProcessorCoordinator
 from session_processor import SessionProcessor
 import utils

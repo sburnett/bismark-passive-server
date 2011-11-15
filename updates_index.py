@@ -40,11 +40,12 @@ class UpdatesIndex(object):
 
     @property
     def sessions(self):
-        cur = self._conn.execute('''SELECT DISTINCT
-                                    node_id, anonymization_context, session_id
-                                    FROM updates
-                                    GROUP BY node_id, anonymization_context, session_id
-                                    ORDER BY sum(length_in_bytes) DESC''')
+        cur = self._conn.execute(
+                '''SELECT DISTINCT
+                   node_id, anonymization_context, session_id
+                   FROM updates
+                   GROUP BY node_id, anonymization_context, session_id
+                   ORDER BY sum(length_in_bytes) DESC''')
         sessions = list()
         for row in cur:
             sessions.append(Session(

@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
-import gzip
-import multiprocessing
+from gzip import GzipFile
+from multiprocessing import Pool
 from optparse import OptionParser
+from os import getpid, makedirs
 from os.path import join
+from shutil import rmtree
 import tarfile
 
 from anonymize_data import anonymize_update
@@ -17,18 +19,13 @@ from update_statistics_processor import UpdateStatisticsProcessorCoordinator
 from updates_index import UpdatesIndex
 from utils import return_negative_one
 
-def process_session(args):
-    (session,
-            session_context_manager,
-            pickle_root,
-            processors,
-            update_files,
-            updates_directory) = args
-    proc_id = multiprocessing.current_process().pid
-    print 'Start %d: %s-%s-%d' % (proc_id,
-                                  session.node_id,
-                                  session.anonymization_context,
-                                  session.id)
+def process_session(session,
+                    session_context_manager,
+                    pickle_root,
+                    result_pickle_root,
+                    processors,
+                    update_files,
+                    updates_directory):
     pickle_filename = '%s_%s_%s.pickle' \
             % (session.node_id, session.anonymization_context, str(session.id))
     pickle_path = join(pickle_root, pickle_filename)
@@ -48,7 +45,7 @@ def process_session(args):
             full_tarname = join(updates_directory, current_tarname)
             tarball = tarfile.open(full_tarname, 'r')
         tarhandle = tarball.extractfile(filename)
-        update_content = gzip.GzipFile(fileobj=tarhandle).read()
+        update_content = GzipFile(fileobj=tarhandle).read()
         update = PassiveUpdate(update_content)
         if update.sequence_number == context.last_sequence_number_processed + 1:
             for processor in processors:
@@ -58,21 +55,25 @@ def process_session(args):
         else:
             print '%s:%s filename skipped: bad sequence number' \
                     % (tarname, filename)
+    del update_files
     if processed_new_update:
-        session_context_manager.save_context(context, pickle_path)
-    results = {}
-    for processor in processors:
-        processor.finished_session()
-    print 'Stop %d: %s-%s-%d' % (proc_id,
-                                 session.node_id,
-                                 session.anonymization_context,
-                                 session.id)
-    return context
+        session_context_manager.save_persistent_context(context, pickle_path)
+        results_pickle_path = join(result_pickle_root, pickle_filename)
+        session_context_manager.save_all_context(context, results_pickle_path)
+    else:
+        results_pickle_path = pickle_path
+    return results_pickle_path
+
+def process_session_wrapper(args):
+    results_pickle_path = process_session(*args)
+    del args
+    return results_pickle_path
 
 def process_sessions(coordinators,
                      updates_directory,
                      index_filename,
                      pickle_root,
+                     result_pickle_root,
                      num_workers):
     session_context_manager = SessionContextManager()
     session_context_manager.declare_persistent_state(
@@ -89,30 +90,34 @@ def process_sessions(coordinators,
             session_context_manager.declare_ephemeral_state(
                     name, init_func, merge_func)
 
-    pool = multiprocessing.Pool(processes=num_workers)
-    results = []
+    print 'Preparing processors'
+    process_args = []
     index = UpdatesIndex(index_filename)
-    print 'Dispatching jobs'
-    args = []
     for session in index.sessions:
         processors = []
         for coordinator in coordinators:
-            processor = coordinator.create_processor(session)
-            processors.append(processor)
+            processors.append(coordinator.create_processor(session))
         update_files = index.session_data(session)
-        args.append((session,
-                     session_context_manager,
-                     pickle_root,
-                     processors,
-                     update_files,
-                     updates_directory))
+        process_args.append((session,
+                             session_context_manager,
+                             pickle_root,
+                             result_pickle_root,
+                             processors,
+                             update_files,
+                             updates_directory))
+
+    print 'Processing sessions'
     global_context = GlobalContext()
-    for session_context in pool.imap_unordered(process_session, args):
+    pool = Pool(processes=num_workers)
+    results = pool.imap_unordered(process_session_wrapper, process_args)
+    for pickle_path in results:
+        session_context = session_context_manager.load_context(pickle_path)
         session_context_manager.merge_contexts(session_context, global_context)
+        del session_context
     pool.close()
     pool.join()
 
-    print 'Finishing'
+    print 'Post-processing'
     for coordinator in coordinators:
         coordinator.finished_processing(global_context)
 
@@ -125,6 +130,9 @@ def parse_args():
     parser.add_option('-d', '--database', action='store', dest='db_name',
                       default='bismark_openwrt_live_v0_1',
                       help='Database name')
+    parser.add_option('-t', '--temp-pickles-dir', action='store',
+                      dest='temp_pickles_dir', default='/dev/shm',
+                      help='Directory for temporary runtime pickle storage')
     parser.add_option('-w', '--workers', type='int', action='store',
                       dest='workers', default=8,
                       help='Maximum number of worker threads to use')
@@ -166,12 +174,15 @@ def main():
             print 'Anonymizing traces into', options.anonymize_traces_dir
             for new_trace in new_traces:
                 anonymize_update(new_trace, options.anonymize_traces_dir)
-    print 'Processing sessions'
+    result_pickle_root = join(options.temp_pickles_dir, str(getpid()))
+    makedirs(result_pickle_root)
     process_sessions(coordinators,
                      args['updates_directory'],
                      args['index_filename'],
                      args['pickle_directory'],
+                     result_pickle_root,
                      options.workers)
+    rmtree(result_pickle_root)
 
 if __name__ == '__main__':
     main()

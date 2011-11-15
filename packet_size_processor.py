@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from database_session_processor import DatabaseProcessorCoordinator
 from session_processor import SessionProcessor
 import utils

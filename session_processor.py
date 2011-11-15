@@ -11,9 +11,6 @@ class SessionProcessor(object):
         """Process a single update. This method is guaranteed to be called with
         updates with sequence numbers incrementing from 0."""
 
-    def finished_session(self):
-        pass
-
 class ProcessorCoordinator(object):
     __metaclass__ = ABCMeta
 

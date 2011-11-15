@@ -17,4 +17,4 @@ class DatabaseProcessorCoordinator(ProcessorCoordinator):
 
     @abstractmethod
     def write_to_database(self, database, global_context):
-        """Implement this method instead of override finished_processing."""
+        """Implement this method instead of overriding finished_processing."""

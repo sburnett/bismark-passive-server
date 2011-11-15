@@ -57,15 +57,18 @@ class SessionContextManager(object):
         except:
             return None
         for name, initialize in self._initializers.iteritems():
-            if not hasattr(context, name) or name in self._ephemeral_names:
+            if not hasattr(context, name):
                 setattr(context, name, initialize())
         return context
 
-    def save_context(self, context, filename):
+    def save_persistent_context(self, context, filename):
         copied_context = copy.copy(context)
         for name in self._ephemeral_names:
             delattr(copied_context, name)
         cPickle.dump(copied_context, open(filename, 'wb'), 2)
+
+    def save_all_context(self, context, filename):
+        cPickle.dump(context, open(filename, 'wb'), 2)
 
     def merge_contexts(self, session_context, global_context):
         for name, merger in self._mergers.iteritems():
