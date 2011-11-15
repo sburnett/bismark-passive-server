@@ -1,4 +1,5 @@
 #!/usr/bin/env python 
+# Testing commit permissions
 
 from cStringIO import StringIO
 from glob import glob
