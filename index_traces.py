@@ -18,13 +18,15 @@ def index_traces(updates_directory, index_filename):
         if basename(tarname) not in tarnames_processed:
             try:
                 true_sum = splitext(basename(tarname))[0].split('_')[3]
+            except IndexError:
+                true_sum = None
+            if true_sum is not None:
                 hasher = md5()
                 hasher.update(open(tarname, 'r').read())
                 if hasher.hexdigest() != true_sum:
                     print 'skipping', tarname, '(invalid hash)'
                     continue
-            except:
-                pass
+
             tarball = tarfile.open(tarname, 'r')
             for tarmember in tarball.getmembers():
                 tarhandle = tarball.extractfile(tarmember.name)
