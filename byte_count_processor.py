@@ -66,8 +66,8 @@ class ByteCountSessionProcessor(SessionProcessor):
                 key = (context.address_map[flow.destination_ip],
                        flow.source_ip)
             domains = []
-            if key is not None and key in context.flow_ip_map:
-                for domain, start_time, end_time in context.flow_ip_map[key]:
+            if key is not None and key in context.dns_ip_map:
+                for domain, start_time, end_time in context.dns_ip_map[key]:
                     if packet.timestamp >= start_time \
                             and packet.timestamp <= end_time:
                         domains.append(domain)

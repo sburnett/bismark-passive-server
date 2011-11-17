@@ -1,3 +1,18 @@
+""" This module maintains the following useful state in the session context:
+
+    flows maps flow IDs to flow objects containing IP addresses, etc.
+    address_map maps LAN IP addresses to indices in update.addresses.
+                These indices are used in several places as placeholders
+                for local MAC addresses (anywhere you see "address_id").
+    mac_address_map maps LAN IP address to local MAC addresses; this
+                    is a shortcut for address_map if all you need is
+                    to look up the MAC address of a local device.
+    dns_ip_map maps an address_id (i.e., a local device) and a
+                remote IP address to a set of domain names and
+                valid time windows for those mappings. This is
+                the set of valid DNS mappings for a device.
+"""
+
 import re
 
 from session_processor import ProcessorCoordinator, SessionProcessor
@@ -41,9 +56,6 @@ class CorrelationSessionProcessor(SessionProcessor):
             key = (context.address_map[flow.destination_ip], flow.source_ip)
         else:
             return
-        context.flow_ip_map[key]
-        if key in context.dns_map_ip:
-            context.flow_ip_map[key].update(context.dns_map_ip[key])
 
     def process_a_record(self, context, a_record, a_packet):
         if a_record.anonymized:
@@ -56,9 +68,7 @@ class CorrelationSessionProcessor(SessionProcessor):
                 domain_record = (domain,
                                  a_packet.timestamp,
                                  a_packet.timestamp + a_record.ttl)
-                context.dns_map_ip[ip_key].add(domain_record)
-                if ip_key in context.flow_ip_map:
-                    context.flow_ip_map[ip_key].add(domain_record)
+                context.dns_ip_map[ip_key].add(domain_record)
 
     def process_cname_record(self, context, cname_record, packet_series):
         if cname_record.anonymized:
@@ -87,9 +97,7 @@ class CorrelationSessionProcessor(SessionProcessor):
                         continue
                     ip_key = (a_record.address_id, a_record.ip_address)
                     domain_record = (domain, start_timestamp, end_timestamp)
-                    context.dns_map_ip[ip_key].add(domain_record)
-                    if ip_key in context.flow_ip_map:
-                        context.flow_ip_map[ip_key].add(domain_record)
+                    context.dns_ip_map[ip_key].add(domain_record)
 
 class CorrelationProcessorCoordinator(ProcessorCoordinator):
     persistent_state = dict(
@@ -97,8 +105,7 @@ class CorrelationProcessorCoordinator(ProcessorCoordinator):
             address_map=(dict, None),
             mac_address_map=(dict, None),
             flows=(dict, None),
-            flow_ip_map=(utils.initialize_set_dict, None),
-            dns_map_ip=(utils.initialize_set_dict, None),
+            dns_ip_map=(utils.initialize_set_dict, None),
             dns_a_map_domain=(utils.initialize_list_dict, None)
             )
     ephemeral_state = dict()
