@@ -32,30 +32,43 @@ class CorrelationSessionProcessor(SessionProcessor):
             context.address_map[address.ip_address] = index
             context.mac_address_map[address.ip_address] = address.mac_address
 
-        for flow in update.flow_table:
-            self.process_flow(context, flow)
-
         for a_record in update.a_records:
             try:
                 a_packet = update.packet_series[a_record.packet_id]
             except IndexError:
                 continue
             self.process_a_record(context, a_record, a_packet)
-
         for cname_record in update.cname_records:
             self.process_cname_record(
                     context, cname_record, update.packet_series)
+        self.cleanup_dns_ip_map(context, update.timestamp)
 
-    def process_flow(self, context, flow):
-        context.flows[flow.flow_id] = flow
-        if flow.source_ip in context.address_map \
-                and not flow.destination_ip_anonymized:
-            key = (context.address_map[flow.source_ip], flow.destination_ip)
-        elif flow.destination_ip in context.address_map \
-                and not flow.source_ip_anonymized:
-            key = (context.address_map[flow.destination_ip], flow.source_ip)
-        else:
-            return
+        flow_beginnings = {}
+        for packet in update.packet_series:
+            if packet.flow_id not in flow_beginnings:
+                flow_beginnings[packet.flow_id] = packet.timestamp
+        for flow in update.flow_table:
+            timestamp = flow_beginnings.get(flow.flow_id)
+            if flow.source_ip in context.address_map \
+                    and not flow.destination_ip_anonymized:
+                key = (context.address_map[flow.source_ip],
+                       flow.destination_ip)
+            elif flow.destination_ip in context.address_map \
+                    and not flow.source_ip_anonymized:
+                key = (context.address_map[flow.destination_ip],
+                       flow.source_ip)
+            else:
+                key = None
+            domains = set()
+            if key is not None and key in context.dns_ip_map:
+                for domain, start_time, end_time in context.dns_ip_map[key]:
+                    if timestamp is not None \
+                            and timestamp >= start_time \
+                            and timestamp <= end_time:
+                        domains.add(domain)
+            else:
+                domains = ['unknown']
+            context.flows[flow.flow_id] = flow, domains
 
     def process_a_record(self, context, a_record, a_packet):
         if a_record.anonymized:
@@ -99,6 +112,12 @@ class CorrelationSessionProcessor(SessionProcessor):
                     domain_record = (domain, start_timestamp, end_timestamp)
                     context.dns_ip_map[ip_key].add(domain_record)
 
+    def cleanup_dns_ip_map(self, context, timestamp):
+        for key, mappings in context.dns_ip_map.items():
+             mappings.difference_update(filter(
+                 lambda (domain, start, end): end < timestamp,
+                 mappings))
+
 class CorrelationProcessorCoordinator(ProcessorCoordinator):
     persistent_state = dict(
             whitelist=(set, None),
@@ -106,7 +125,7 @@ class CorrelationProcessorCoordinator(ProcessorCoordinator):
             mac_address_map=(dict, None),
             flows=(dict, None),
             dns_ip_map=(utils.initialize_set_dict, None),
-            dns_a_map_domain=(utils.initialize_list_dict, None)
+            dns_a_map_domain=(utils.initialize_list_dict, None),
             )
     ephemeral_state = dict()
 
