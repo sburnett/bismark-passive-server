@@ -1,6 +1,9 @@
 """ This module maintains the following useful state in the session context:
 
-    flows maps flow IDs to flow objects containing IP addresses, etc.
+    flows maps flow IDs to a tuple of a flow object (containing IP addresses,
+          port numbers, etc.) and a set of domains corresponding to
+          the DNS mappings for the flow's source and destination IPs
+          that were valid when the flow was created.
     address_map maps LAN IP addresses to indices in update.addresses.
                 These indices are used in several places as placeholders
                 for local MAC addresses (anywhere you see "address_id").
