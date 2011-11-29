@@ -102,14 +102,21 @@ def process_sessions_real(coordinators,
 
     print 'Processing sessions'
     global_context = GlobalContext()
-    pool = Pool(processes=num_workers)
-    results = pool.imap_unordered(process_session_wrapper, process_args)
-    for pickle_path in results:
-        session_context = session_context_manager.load_context(pickle_path)
-        session_context_manager.merge_contexts(session_context, global_context)
-        del session_context
-    pool.close()
-    pool.join()
+    if num_workers == 0:
+        for args in process_args:
+            pickle_path = process_session_wrapper(args)
+            session_context = session_context_manager.load_context(pickle_path)
+            session_context_manager.merge_contexts(session_context, global_context)
+            del session_context
+    else:
+        pool = Pool(processes=num_workers)
+        results = pool.imap_unordered(process_session_wrapper, process_args)
+        for pickle_path in results:
+            session_context = session_context_manager.load_context(pickle_path)
+            session_context_manager.merge_contexts(session_context, global_context)
+            del session_context
+        pool.close()
+        pool.join()
 
     print 'Post-processing'
     for coordinator in coordinators:
