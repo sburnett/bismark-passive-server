@@ -46,32 +46,8 @@ class CorrelationSessionProcessor(SessionProcessor):
                     context, cname_record, update.packet_series)
         self.cleanup_dns_ip_map(context, update.timestamp)
 
-        flow_beginnings = {}
-        for packet in update.packet_series:
-            if packet.flow_id not in flow_beginnings:
-                flow_beginnings[packet.flow_id] = packet.timestamp
         for flow in update.flow_table:
-            timestamp = flow_beginnings.get(flow.flow_id)
-            if flow.source_ip in context.address_map \
-                    and not flow.destination_ip_anonymized:
-                key = (context.address_map[flow.source_ip],
-                       flow.destination_ip)
-            elif flow.destination_ip in context.address_map \
-                    and not flow.source_ip_anonymized:
-                key = (context.address_map[flow.destination_ip],
-                       flow.source_ip)
-            else:
-                key = None
-            domains = set()
-            if key is not None and key in context.dns_ip_map:
-                for domain, start_time, end_time in context.dns_ip_map[key]:
-                    if timestamp is not None \
-                            and timestamp >= start_time \
-                            and timestamp <= end_time:
-                        domains.add(domain)
-            else:
-                domains = ['unknown']
-            context.flows[flow.flow_id] = flow, domains
+            context.flows[flow.flow_id] = flow, {}
 
     def process_a_record(self, context, a_record, a_packet):
         if a_record.anonymized:

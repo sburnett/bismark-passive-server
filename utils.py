@@ -3,6 +3,10 @@ from datetime import datetime
 
 def initialize_int_dict():
     return defaultdict(int)
+def initialize_int_pair():
+    return [int(), int()]
+def initialize_int_pair_dict():
+    return defaultdict(initialize_int_pair)
 def initialize_set_dict():
     return defaultdict(set)
 def initialize_list_dict():
@@ -21,6 +25,11 @@ def update_dict(first, second):
 def sum_dicts(first, second):
     for key, value in first.iteritems():
         second[key] += value
+    return second
+def sum_pair_dicts(first, second):
+    for key, value in first.iteritems():
+        second[key][0] += value[0]
+        second[key][1] += value[1]
     return second
 def min_dicts(first, second):
     for key, value in first.iteritems():
