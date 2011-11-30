@@ -128,9 +128,9 @@ class ByteCountProcessorCoordinator(DatabaseProcessorCoordinator):
                     (utils.initialize_int_dict, utils.sum_dicts),
             )
 
-    def __init__(self, username, database, rebuild=False):
-        super(ByteCountProcessorCoordinator, self).__init__(username, database)
-        if rebuild:
+    def __init__(self, options):
+        super(ByteCountProcessorCoordinator, self).__init__(options)
+        if options.db_rebuild:
             timestamp_init = utils.initialize_min_timestamp_dict
         else:
             timestamp_init = utils.initialize_max_timestamp_dict

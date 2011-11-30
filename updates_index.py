@@ -46,13 +46,11 @@ class UpdatesIndex(object):
                    FROM updates
                    GROUP BY node_id, anonymization_context, session_id
                    ORDER BY sum(length_in_bytes) DESC''')
-        sessions = list()
         for row in cur:
-            sessions.append(Session(
+            yield Session(
                 node_id=row['node_id'],
                 anonymization_context=row['anonymization_context'],
-                id=row['session_id']))
-        return sessions
+                id=row['session_id'])
 
     def session_data(self, session):
         cur = self._conn.execute('''SELECT DISTINCT tarname, filename

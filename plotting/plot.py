@@ -298,3 +298,31 @@ def plot_packet_size_cdf_ssl(conn, node):
     ax.set_ylabel('CDF')
     plt.savefig('%s_packet_size_cdf.pdf' % node)
 
+def plot_daily_traffic_ports_dhcp(conn, node):
+    cur = conn.cursor()
+    cur.execute('''SELECT eventstamp,port,bytes_transferred
+                   FROM bytes_per_port_per_day_memoized
+                   WHERE node_id = %s
+                   AND (port = 67 OR port = 68)
+                   ORDER BY bytes_transferred DESC''', (node,))
+
+    lines = defaultdict(list)
+    for row in cur:
+        lines[row[1]].append((row[0], float(row[2])/2**20))
+
+    fig = plt.figure()
+    fig.suptitle('Daily DHCP traffic for %s' % node)
+    ax = fig.add_subplot(111)
+    for idx, (port, points) in enumerate(lines.items()):
+        xs, ys = zip(*points)
+        xxs = numpy.array(xs)
+        ax.bar(xxs + datetime.timedelta(hours=24./(len(lines) + 1))*idx, ys, label='Port %d' % port, color=cm.Paired(idx*100), width=1./(len(lines)+1))
+    ax.legend()
+    ax.set_xlabel('Time (days)')
+    ax.set_ylabel('Megabytes')
+    ax.xaxis.set_major_formatter(DateFormatter('%Y-%m-%d'))
+    ax.xaxis.set_minor_locator(DayLocator())
+    ax.xaxis.set_major_locator(DayLocator(interval=1))
+    fig.autofmt_xdate()
+    plt.savefig('%s_port_daily_traffic_dhcp.pdf' % node)
+

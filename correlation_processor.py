@@ -108,8 +108,8 @@ class CorrelationProcessorCoordinator(ProcessorCoordinator):
             )
     ephemeral_state = dict()
 
-    def __init__(self):
-        super(CorrelationProcessorCoordinator, self).__init__()
+    def __init__(self, options):
+        super(CorrelationProcessorCoordinator, self).__init__(options)
 
     def create_processor(self, session):
         return CorrelationSessionProcessor()

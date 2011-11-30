@@ -69,6 +69,9 @@ def process_sessions_real(coordinators,
                           pickle_root,
                           result_pickle_root,
                           num_workers=None):
+    if num_workers != 0:
+        pool = Pool(processes=num_workers)
+
     session_context_manager = SessionContextManager()
     session_context_manager.declare_persistent_state(
             'filenames_processed', set, None)
@@ -109,7 +112,6 @@ def process_sessions_real(coordinators,
             session_context_manager.merge_contexts(session_context, global_context)
             del session_context
     else:
-        pool = Pool(processes=num_workers)
         results = pool.imap_unordered(process_session_wrapper, process_args)
         for pickle_path in results:
             session_context = session_context_manager.load_context(pickle_path)

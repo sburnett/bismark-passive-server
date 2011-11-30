@@ -187,9 +187,29 @@ CREATE TABLE packet_sizes_per_port (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
     port integer NOT NULL,
+    protocol varchar NOT NULL,
     packet_size integer NOT NULL,
-    count integer,
-    UNIQUE (node_id, port, packet_size)
+    inbound integer NOT NULL,
+    outbound integer NOT NULL,
+    UNIQUE (node_id, port, protocol, packet_size)
+);
+
+CREATE TABLE bytes_per_ip (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    anonymization_context varchar NOT NULL,
+    ip varchar NOT NULL,
+    count bigint NOT NULL,
+    UNIQUE (node_id, anonymization_context, ip)
+);
+
+CREATE TABLE packets_per_ip (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    anonymization_context varchar NOT NULL,
+    ip varchar NOT NULL,
+    count bigint NOT NULL,
+    UNIQUE (node_id, anonymization_context, ip)
 );
 
 CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;
@@ -441,26 +461,92 @@ CREATE OR REPLACE FUNCTION
 merge_packet_size_per_port(
     v_node_id varchar,
     v_port integer,
+    v_protocol varchar,
     v_packet_size integer,
-    v_count integer)
+    v_inbound integer,
+    v_outbound integer)
 RETURNS integer AS $$
 DECLARE
     v_id integer;
 BEGIN
     BEGIN
         INSERT INTO packet_sizes_per_port
-        (node_id, port, packet_size, count)
+        (node_id, port, protocol, packet_size, inbound, outbound)
         VALUES (v_node_id,
                 v_port,
+                v_protocol,
                 v_packet_size,
-                v_count)
+                v_inbound,
+                v_outbound)
         RETURNING id INTO v_id;
     EXCEPTION WHEN unique_violation THEN
         UPDATE packet_sizes_per_port SET
-        count = v_count
+        inbound = v_inbound,
+        outbound = v_outbound
         WHERE node_id = v_node_id
         AND port = v_port
+        AND protocol = v_protocol
         AND packet_size = v_packet_size
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_bytes_per_ip(
+    v_node_id varchar,
+    v_anonymization_context varchar,
+    v_ip varchar,
+    v_count bigint)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO bytes_per_ip
+        (node_id, anonymization_context, ip, count)
+        VALUES (v_node_id,
+                v_anonymization_context,
+                v_ip,
+                v_count)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE bytes_per_ip SET
+        count = v_count
+        WHERE node_id = v_node_id
+        AND anonymization_context = v_anonymization_context
+        AND ip = v_ip
+        RETURNING id INTO v_id;
+    END;
+    RETURN v_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION
+merge_packets_per_ip(
+    v_node_id varchar,
+    v_anonymization_context varchar,
+    v_ip varchar,
+    v_count bigint)
+RETURNS integer AS $$
+DECLARE
+    v_id integer;
+BEGIN
+    BEGIN
+        INSERT INTO packets_per_ip
+        (node_id, anonymization_context, ip, count)
+        VALUES (v_node_id,
+                v_anonymization_context,
+                v_ip,
+                v_count)
+        RETURNING id INTO v_id;
+    EXCEPTION WHEN unique_violation THEN
+        UPDATE packets_per_ip SET
+        count = v_count
+        WHERE node_id = v_node_id
+        AND anonymization_context = v_anonymization_context
+        AND ip = v_ip
         RETURNING id INTO v_id;
     END;
     RETURN v_id;
