@@ -40,9 +40,9 @@ class UpdateStatisticsSessionProcessor(SessionProcessor):
 class UpdateStatisticsProcessorCoordinator(DatabaseProcessorCoordinator):
     persistent_state = dict(update_statistics=(dict, utils.update_dict))
 
-    def __init__(self, username, database, rebuild=False):
-        super(UpdateStatisticsProcessorCoordinator, self).__init__(username, database)
-        if rebuild:
+    def __init__(self, options):
+        super(UpdateStatisticsProcessorCoordinator, self).__init__(options)
+        if options.db_rebuild:
             timestamp_init = utils.initialize_min_timestamp_dict
         else:
             timestamp_init = utils.initialize_max_timestamp_dict

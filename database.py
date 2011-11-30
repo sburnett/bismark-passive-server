@@ -108,13 +108,20 @@ class BismarkPassiveDatabase(object):
                 raise ValueError('Invalid key', key)
         self._conn.commit()
 
-    def import_size_statistics(self, packet_size_per_port):
+    def import_size_statistics(self,
+                               packet_size_per_port_tcp,
+                               packet_size_per_port_udp):
         cur = self._conn.cursor()
         args = []
-        for (node_id, port, size), count in packet_size_per_port.iteritems():
-            args.append((node_id, port, size, count))
+        for (node_id, port, size), (inbound, outbound) \
+                in packet_size_per_port_tcp.iteritems():
+            args.append((node_id, port, 'tcp', size, inbound, outbound))
+        for (node_id, port, size), (inbound, outbound) \
+                in packet_size_per_port_udp.iteritems():
+            args.append((node_id, port, 'udp', size, inbound, outbound))
         cur.executemany(
-                'SELECT merge_packet_size_per_port(%s, %s, %s, %s)', args)
+                'SELECT merge_packet_size_per_port(%s, %s, %s, %s, %s, %s)',
+                args)
         self._conn.commit()
 
     def import_update_statistics(self, update_statistics, oldest_timestamps):
@@ -136,5 +143,23 @@ class BismarkPassiveDatabase(object):
                             statistics.cname_records_size))
         cur.executemany('''SELECT merge_update_statistics
                            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                        args)
+        self._conn.commit()
+
+    def import_bytes_per_ip(self, bytes_per_ip):
+        cur = self._conn.cursor()
+        args = []
+        for (node_id, anonymization_id, ip), count in bytes_per_ip.iteritems():
+            args.append((node_id, anonymization_id, ip, count))
+        cur.executemany('SELECT merge_bytes_per_ip (%s, %s, %s, %s)', args)
+        self._conn.commit()
+
+    def import_packets_per_ip(self, packets_per_ip):
+        cur = self._conn.cursor()
+        args = []
+        for (node_id, anonymization_id, ip), count \
+                in packets_per_ip.iteritems():
+            args.append((node_id, anonymization_id, ip, count))
+        cur.executemany('SELECT merge_packets_per_ip (%s, %s, %s, %s, %s)',
                         args)
         self._conn.commit()

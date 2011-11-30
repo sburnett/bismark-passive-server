@@ -14,7 +14,7 @@ class SessionProcessor(object):
 class ProcessorCoordinator(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self):
+    def __init__(self, options):
         pass
 
     @abstractmethod
