@@ -7,7 +7,7 @@ from process_sessions import process_sessions
 
 from byte_count_processor import ByteCountProcessorCoordinator
 from correlation_processor import CorrelationProcessorCoordinator
-from ip_byte_count_processor import IpByteCountProcessorCoordinator
+from ip_counts_processor import IpCountsProcessorCoordinator
 from packet_size_processor import PacketSizeProcessorCoordinator
 from update_statistics_processor import UpdateStatisticsProcessorCoordinator
 
@@ -17,7 +17,7 @@ harnesses = {
         'dashboard': [CorrelationProcessorCoordinator,
                       ByteCountProcessorCoordinator],
         'ip_counts': [CorrelationProcessorCoordinator,
-                      IpByteCountProcessorCoordinator],
+                      IpCountsProcessorCoordinator],
         'packet_size': [CorrelationProcessorCoordinator,
                         PacketSizeProcessorCoordinator],
         'updates': [UpdateStatisticsProcessorCoordinator],

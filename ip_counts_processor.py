@@ -2,9 +2,9 @@ from database_session_processor import DatabaseProcessorCoordinator
 from session_processor import SessionProcessor
 import utils
 
-class IpByteCountSessionProcessor(SessionProcessor):
+class IpCountsSessionProcessor(SessionProcessor):
     def __init__(self):
-        super(IpByteCountSessionProcessor, self).__init__()
+        super(IpCountsSessionProcessor, self).__init__()
     
     def process_update(self, context, update):
         for packet in update.packet_series:
@@ -31,7 +31,7 @@ class IpByteCountSessionProcessor(SessionProcessor):
                                    context.anonymization_id,
                                    ip] += 1
 
-class IpByteCountProcessorCoordinator(DatabaseProcessorCoordinator):
+class IpCountsProcessorCoordinator(DatabaseProcessorCoordinator):
     persistent_state = dict(
             bytes_per_ip=\
                     (utils.initialize_int_dict, utils.sum_dicts),
@@ -41,10 +41,10 @@ class IpByteCountProcessorCoordinator(DatabaseProcessorCoordinator):
     ephemeral_state = dict()
 
     def __init__(self, options):
-        super(IpByteCountProcessorCoordinator, self).__init__(options)
+        super(IpCountsProcessorCoordinator, self).__init__(options)
 
     def create_processor(self, session):
-        return IpByteCountSessionProcessor()
+        return IpCountsSessionProcessor()
     
     def write_to_database(self, database, global_context):
         database.import_bytes_per_ip(global_context.bytes_per_ip)
