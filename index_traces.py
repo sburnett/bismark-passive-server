@@ -13,7 +13,6 @@ from updates_index import UpdatesIndex
 def index_traces(updates_directory, index_filename):
     index = UpdatesIndex(index_filename)
     tarnames_processed = index.tarnames
-    new_tarnames = []
     for tarname in glob(join(updates_directory, '*.tar')):
         if basename(tarname) not in tarnames_processed:
             try:
@@ -43,5 +42,3 @@ def index_traces(updates_directory, index_filename):
                             update.creation_time,
                             update.sequence_number,
                             len(update_content))
-            new_tarnames.append(tarname)
-    return new_tarnames
