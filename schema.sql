@@ -212,6 +212,57 @@ CREATE TABLE packets_per_ip (
     UNIQUE (node_id, anonymization_context, ip)
 );
 
+CREATE TABLE bytes_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    bytes bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, bytes)
+);
+
+CREATE TABLE bytes_per_port_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    port integer NOT NULL,
+    bytes bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, port, bytes)
+);
+
+CREATE TABLE packets_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    packets bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, packets)
+);
+
+CREATE TABLE packets_per_port_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    port integer NOT NULL,
+    packets bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, port, packets)
+);
+
+CREATE TABLE seconds_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    seconds bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, seconds)
+);
+
+CREATE TABLE seconds_per_port_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    port integer NOT NULL,
+    seconds bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, port, seconds)
+);
+
 CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;
 SELECT execute('GRANT SELECT ON bismark_passive.'||tablename||' to abhishek;')
 FROM pg_tables WHERE schemaname = 'bismark_passive';

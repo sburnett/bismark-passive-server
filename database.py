@@ -160,6 +160,38 @@ class BismarkPassiveDatabase(object):
         for (node_id, anonymization_id, ip), count \
                 in packets_per_ip.iteritems():
             args.append((node_id, anonymization_id, ip, count))
-        cur.executemany('SELECT merge_packets_per_ip (%s, %s, %s, %s, %s)',
-                        args)
+        cur.executemany('SELECT merge_packets_per_ip (%s, %s, %s, %s)', args)
+        self._conn.commit()
+
+    def import_bytes_per_flow(self, bytes_per_flow):
+        cur = self._conn.cursor()
+        args = []
+        cur.execute('DELETE FROM bytes_per_flow')
+        for (node_id, size), count in bytes_per_flow.iteritems():
+            args.append((node_id, size, count))
+        cur.executemany('''INSERT INTO bytes_per_flow
+                           (node_id, bytes, count)
+                           VALUES (%s, %s, %s)''', args)
+        self._conn.commit()
+
+    def import_packets_per_flow(self, packets_per_flow):
+        cur = self._conn.cursor()
+        args = []
+        cur.execute('DELETE FROM packets_per_flow')
+        for (node_id, size), count in packets_per_flow.iteritems():
+            args.append((node_id, size, count))
+        cur.executemany('''INSERT INTO packets_per_flow
+                           (node_id, packets, count)
+                           VALUES (%s, %s, %s)''', args)
+        self._conn.commit()
+
+    def import_seconds_per_flow(self, seconds_per_flow):
+        cur = self._conn.cursor()
+        args = []
+        cur.execute('DELETE FROM seconds_per_flow')
+        for (node_id, size), count in seconds_per_flow.iteritems():
+            args.append((node_id, size, count))
+        cur.executemany('''INSERT INTO seconds_per_flow
+                           (node_id, seconds, count)
+                           VALUES (%s, %s, %s)''', args)
         self._conn.commit()

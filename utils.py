@@ -7,6 +7,10 @@ def initialize_int_pair():
     return [int(), int()]
 def initialize_int_pair_dict():
     return defaultdict(initialize_int_pair)
+def initialize_int_triple():
+    return [int(), int(), int()]
+def initialize_int_triple_dict():
+    return defaultdict(initialize_int_triple)
 def initialize_set_dict():
     return defaultdict(set)
 def initialize_list_dict():
@@ -34,6 +38,16 @@ def sum_pair_dicts(first, second):
 def min_dicts(first, second):
     for key, value in first.iteritems():
         second[key] = min(value, second[key])
+    return second
+def overwrite_dict(first, second):
+    for key, value in first.iteritems():
+        second[key] = value
+    return second
+def merge_disjoint_dicts(first, second):
+    for key, value in first.iteritems():
+        if key in second:
+            raise ValueError('dictionaries are not disjoint')
+        second[key] = value
     return second
 def return_negative_one():
     return -1
