@@ -195,3 +195,36 @@ class BismarkPassiveDatabase(object):
                            (node_id, seconds, count)
                            VALUES (%s, %s, %s)''', args)
         self._conn.commit()
+
+    def import_bytes_per_port_per_flow(self, bytes_per_port_per_flow):
+        cur = self._conn.cursor()
+        args = []
+        cur.execute('DELETE FROM bytes_per_port_per_flow')
+        for (node_id, port, size), count in bytes_per_port_per_flow.iteritems():
+            args.append((node_id, port, size, count))
+        cur.executemany('''INSERT INTO bytes_per_port_per_flow
+                           (node_id, port, bytes, count)
+                           VALUES (%s, %s, %s, %s)''', args)
+        self._conn.commit()
+
+    def import_packets_per_port_per_flow(self, packets_per_port_per_flow):
+        cur = self._conn.cursor()
+        args = []
+        cur.execute('DELETE FROM packets_per_port_per_flow')
+        for (node_id, port, size), count in packets_per_port_per_flow.iteritems():
+            args.append((node_id, port, size, count))
+        cur.executemany('''INSERT INTO packets_per_port_per_flow
+                           (node_id, port, packets, count)
+                           VALUES (%s, %s, %s, %s)''', args)
+        self._conn.commit()
+
+    def import_seconds_per_port_per_flow(self, seconds_per_port_per_flow):
+        cur = self._conn.cursor()
+        args = []
+        cur.execute('DELETE FROM seconds_per_port_per_flow')
+        for (node_id, port, duration), count in seconds_per_port_per_flow.iteritems():
+            args.append((node_id, port, duration, count))
+        cur.executemany('''INSERT INTO seconds_per_port_per_flow
+                           (node_id, port, seconds, count)
+                           VALUES (%s, %s, %s, %s)''', args)
+        self._conn.commit()

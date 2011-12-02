@@ -220,7 +220,7 @@ CREATE TABLE bytes_per_flow (
     UNIQUE (node_id, bytes)
 );
 
-CREATE TABLE bytes_per_port_flow (
+CREATE TABLE bytes_per_port_per_flow (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
     port integer NOT NULL,
