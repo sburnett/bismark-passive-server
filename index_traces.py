@@ -42,3 +42,4 @@ def index_traces(updates_directory, index_filename):
                             update.creation_time,
                             update.sequence_number,
                             len(update_content))
+    index.finalize_indexing()

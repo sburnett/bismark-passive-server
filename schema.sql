@@ -229,6 +229,24 @@ CREATE TABLE bytes_per_port_per_flow (
     UNIQUE (node_id, port, bytes)
 );
 
+CREATE TABLE bytes_per_domain_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    domain varchar NOT NULL,
+    bytes bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, domain, bytes)
+);
+
+CREATE TABLE bytes_per_device_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    device varchar NOT NULL,
+    bytes bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, device, bytes)
+);
+
 CREATE TABLE packets_per_flow (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
@@ -246,6 +264,24 @@ CREATE TABLE packets_per_port_per_flow (
     UNIQUE (node_id, port, packets)
 );
 
+CREATE TABLE packets_per_domain_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    domain varchar NOT NULL,
+    packets bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, domain, packets)
+);
+
+CREATE TABLE packets_per_device_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    device varchar NOT NULL,
+    packets bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, device, packets)
+);
+
 CREATE TABLE seconds_per_flow (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
@@ -261,6 +297,24 @@ CREATE TABLE seconds_per_port_per_flow (
     seconds bigint NOT NULL,
     count integer NOT NULL,
     UNIQUE (node_id, port, seconds)
+);
+
+CREATE TABLE seconds_per_domain_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    domain varchar NOT NULL,
+    seconds bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, domain, seconds)
+);
+
+CREATE TABLE seconds_per_device_per_flow (
+    id SERIAL PRIMARY KEY,
+    node_id varchar NOT NULL,
+    device varchar NOT NULL,
+    seconds bigint NOT NULL,
+    count integer NOT NULL,
+    UNIQUE (node_id, device, seconds)
 );
 
 CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;

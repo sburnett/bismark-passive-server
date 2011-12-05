@@ -1,17 +1,15 @@
 from database_session_processor import DatabaseProcessorCoordinator
+from flow_properties_processor import FlowPropertiesSessionProcessor
 from session_processor import SessionProcessor
 import utils
 
-class ByteCountSessionProcessor(SessionProcessor):
+class ByteCountSessionProcessor(FlowPropertiesSessionProcessor):
     def __init__(self):
         super(ByteCountSessionProcessor, self).__init__()
     
-    def process_update(self, context, update):
-        for packet in update.packet_series:
-            self.process_packet(context, packet)
-
-    def process_packet(self, context, packet):
+    def process_packet(self, context, packet, port, device_names, domains):
         rounded_timestamp = packet.timestamp.replace(second=0, microsecond=0)
+
         context.byte_count_oldest_timestamps[context.node_id] \
                 = min(context.byte_count_oldest_timestamps[context.node_id],
                       rounded_timestamp)
@@ -22,95 +20,30 @@ class ByteCountSessionProcessor(SessionProcessor):
 
         context.bytes_per_minute[context.node_id, rounded_timestamp] \
                 += packet.size
-
-        try:
-            flow, flow_data = context.flows[packet.flow_id]
-        except KeyError:
-            flow = flow_data = None
-        if flow is not None:
-            if flow.source_ip in context.address_map \
-                    and flow.destination_ip not in context.address_map:
-                port = flow.destination_port
-            elif flow.destination_ip in context.address_map \
-                    and flow.source_ip not in context.address_map:
-                port = flow.source_port
-            else:
-                port = -1
-            context.bytes_per_port_per_minute[
-                    context.node_id, rounded_timestamp, port] += packet.size
-
-            device_names = []
-            if flow.source_ip in context.mac_address_map:
-                device_names.append(context.mac_address_map[flow.source_ip])
-            if flow.destination_ip in context.mac_address_map:
-                device_names.append(
-                        context.mac_address_map[flow.destination_ip])
-            if device_names == []:
-                device_names = ['unknown']
-            for device_name in device_names:
-                context.bytes_per_device_per_minute[context.node_id,
-                                                    context.anonymization_id,
-                                                    rounded_timestamp,
-                                                    device_name] += packet.size
-                context.bytes_per_device_per_port_per_minute[
-                        context.node_id,
-                        context.anonymization_id,
-                        rounded_timestamp,
-                        device_name,
-                        port] += packet.size
-
-            if 'domains' not in flow_data:
-                flow_data['domains'] = set()
-                if flow.source_ip in context.address_map \
-                        and not flow.destination_ip_anonymized:
-                    key = (context.address_map[flow.source_ip],
-                           flow.destination_ip)
-                elif flow.destination_ip in context.address_map \
-                        and not flow.source_ip_anonymized:
-                    key = (context.address_map[flow.destination_ip],
-                           flow.source_ip)
-                else:
-                    key = None
-                if key is not None and key in context.dns_ip_map:
-                    for domain, start_time, end_time in context.dns_ip_map[key]:
-                        if packet.timestamp >= start_time \
-                                and packet.timestamp <= end_time:
-                            flow_data['domains'].add(domain)
-                else:
-                    flow_data['domains'] = ['unknown']
-            for domain in flow_data['domains']:
-                context.bytes_per_domain_per_minute[context.node_id,
-                                                    rounded_timestamp,
-                                                    domain] += packet.size
-                for device_name in device_names:
-                    context.bytes_per_device_per_domain_per_minute[
-                            context.node_id,
-                            context.anonymization_id,
-                            rounded_timestamp,
-                            device_name,
-                            domain] += packet.size
-        else:
-            context.bytes_per_port_per_minute[
-                    context.node_id, rounded_timestamp, -1] += packet.size
+        context.bytes_per_port_per_minute[
+                context.node_id, rounded_timestamp, port] += packet.size
+        for domain in domains:
             context.bytes_per_domain_per_minute[context.node_id,
                                                 rounded_timestamp,
-                                                'unknown'] += packet.size
+                                                domain] += packet.size
+        for device_name in device_names:
             context.bytes_per_device_per_minute[context.node_id,
                                                 context.anonymization_id,
                                                 rounded_timestamp,
-                                                'unknown'] += packet.size
+                                                device_name] += packet.size
             context.bytes_per_device_per_port_per_minute[
                     context.node_id,
                     context.anonymization_id,
                     rounded_timestamp,
-                    'unknown',
-                    -1] += packet.size
-            context.bytes_per_device_per_domain_per_minute[
-                    context.node_id,
-                    context.anonymization_id,
-                    rounded_timestamp,
-                    'unknown',
-                    'unknown'] += packet.size
+                    device_name,
+                    port] += packet.size
+            for domain in domains:
+                context.bytes_per_device_per_domain_per_minute[
+                        context.node_id,
+                        context.anonymization_id,
+                        rounded_timestamp,
+                        device_name,
+                        domain] += packet.size
 
 class ByteCountProcessorCoordinator(DatabaseProcessorCoordinator):
     persistent_state = dict(

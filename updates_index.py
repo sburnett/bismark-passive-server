@@ -69,20 +69,27 @@ class UpdatesIndex(object):
                            (node_id, anonymization_context, session_id,
                             node_id, anonymization_context, session_id,
                             file_size))
-        self._conn.execute('''INSERT INTO updates
-                              (node_id,
-                               anonymization_context,
-                               session_id,
-                               sequence_number,
-                               tarname,
-                               filename)
-                              VALUES (?, ?, ?, ?, ?, ?)''',
-                           (node_id,
-                            anonymization_context,
-                            session_id,
-                            sequence_number,
-                            tarname,
-                            filename))
+        try:
+            self._conn.execute('''INSERT OR IGNORE INTO updates
+                                  (node_id,
+                                   anonymization_context,
+                                   session_id,
+                                   sequence_number,
+                                   tarname,
+                                   filename)
+                                  VALUES (?, ?, ?, ?, ?, ?)''',
+                               (node_id,
+                                anonymization_context,
+                                session_id,
+                                sequence_number,
+                                tarname,
+                                filename))
+        except sqlite3.IntegrityError:
+            import pdb
+            pdb.set_trace()
+
+    def finalize_indexing(self):
+        self._conn.commit()
 
     @property
     def sessions(self):
@@ -110,6 +117,3 @@ class UpdatesIndex(object):
         for row in cur:
             data.append((row['tarname'], row['filename']))
         return data
-
-    def __del__(self):
-        self._conn.commit()
