@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from gzip import GzipFile
 from multiprocessing import Pool
 from os import getpid, makedirs
