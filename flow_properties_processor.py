@@ -1,8 +1,6 @@
 from abc import abstractmethod
-import re
 
-from session_processor import ProcessorCoordinator, SessionProcessor
-import utils
+from session_processor import SessionProcessor
 
 class FlowPropertiesSessionProcessor(SessionProcessor):
     def __init__(self):

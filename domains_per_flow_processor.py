@@ -1,7 +1,4 @@
-import re
-
 from session_processor import ProcessorCoordinator, SessionProcessor
-import utils
 
 class DomainsPerFlowSessionProcessor(SessionProcessor):
     def __init__(self):

@@ -1,9 +1,5 @@
 import copy
 import cPickle
-import gzip
-from os.path import join
-import tarfile
-from update_parser import PassiveUpdate
 
 class SessionContext(object):
     def __init__(self, node_id, anonymization_id, session_id):

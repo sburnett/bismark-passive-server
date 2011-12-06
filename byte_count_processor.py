@@ -1,6 +1,5 @@
 from database_session_processor import DatabaseProcessorCoordinator
 from flow_properties_processor import FlowPropertiesSessionProcessor
-from session_processor import SessionProcessor
 import utils
 
 class ByteCountSessionProcessor(FlowPropertiesSessionProcessor):
