@@ -34,6 +34,8 @@ harnesses = {
 def parse_coordinator_args(parser):
     """Add arguments for your custom coordinator here. Keep arguments in
     alphabetical order. Don't use short options in this function."""
+    parser.add_option('--db_filename', action='store', dest='db_filename',
+                      help='Sqlite database filename')
     parser.add_option('--db_name', action='store', dest='db_name',
                       default='bismark_openwrt_live_v0_1',
                       help='Database name')

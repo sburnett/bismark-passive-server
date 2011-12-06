@@ -1,4 +1,4 @@
-from database_session_processor import DatabaseProcessorCoordinator
+from sqlite_session_processor import SqliteProcessorCoordinator
 from flow_properties_processor import FlowPropertiesSessionProcessor
 import utils
 
@@ -65,7 +65,7 @@ class FlowStatisticsSessionProcessor(FlowPropertiesSessionProcessor):
         context.seconds_per_flow_accumulator[flow_key] \
                 = time_elapsed.seconds + time_elapsed.days * 86400
 
-class FlowStatisticsProcessorCoordinator(DatabaseProcessorCoordinator):
+class FlowStatisticsProcessorCoordinator(SqliteProcessorCoordinator):
     persistent_state = dict(
             bytes_per_flow=\
                     (utils.initialize_int_dict, utils.sum_dicts),

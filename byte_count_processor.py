@@ -1,4 +1,4 @@
-from database_session_processor import DatabaseProcessorCoordinator
+from postgres_session_processor import PostgresProcessorCoordinator
 from flow_properties_processor import FlowPropertiesSessionProcessor
 import utils
 
@@ -44,7 +44,7 @@ class ByteCountSessionProcessor(FlowPropertiesSessionProcessor):
                         device_name,
                         domain] += packet.size
 
-class ByteCountProcessorCoordinator(DatabaseProcessorCoordinator):
+class ByteCountProcessorCoordinator(PostgresProcessorCoordinator):
     persistent_state = dict(
             bytes_per_minute=\
                     (utils.initialize_int_dict, utils.sum_dicts),
