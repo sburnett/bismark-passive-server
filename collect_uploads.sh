@@ -22,7 +22,7 @@ for node_dir in $UPLOADS_DIR/*; do
                 echo "Tarfile $DESTNAME already exists!"
                 exit 1
             fi
-            TEMPNAME=`mktemp tmp-bismark-passive-upload.XXXXXXXXX`
+            TEMPNAME=`mktemp /tmp/tmp-bismark-passive-upload.XXXXXXXXX`
             tar cf $TEMPNAME ${UPDATE_FILES[*]} \
                 && mv $TEMPNAME $DESTNAME
         fi
