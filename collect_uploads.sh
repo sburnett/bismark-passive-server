@@ -24,7 +24,8 @@ for node_dir in $UPLOADS_DIR/*; do
             fi
             TEMPNAME=`mktemp /tmp/tmp-bismark-passive-upload.XXXXXXXXX`
             tar cf $TEMPNAME ${UPDATE_FILES[*]} \
-                && mv $TEMPNAME $DESTNAME
+                && mv $TEMPNAME $DESTNAME \
+                && rm ${UPDATE_FILES[*]}
         fi
     fi
 done
