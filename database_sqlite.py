@@ -5,6 +5,21 @@ class BismarkPassiveSqliteDatabase(object):
         self._conn = sqlite3.connect(filename)
         self._conn.row_factory = sqlite3.Row
 
+        self._conn.execute('''PRAGMA journal_mode = MEMORY''')
+        self._conn.execute('''CREATE TABLE IF NOT EXISTS bytes_per_ip (
+                               node_id text NOT NULL,
+                               anonymization_context text NOT NULL,
+                               ip text NOT NULL,
+                               count integer NOT NULL,
+                               UNIQUE (node_id, anonymization_context, ip)
+                              )''')
+        self._conn.execute('''CREATE TABLE IF NOT EXISTS packets_per_ip (
+                               node_id text NOT NULL,
+                               anonymization_context text NOT NULL,
+                               ip text NOT NULL,
+                               count integer NOT NULL,
+                               UNIQUE (node_id, anonymization_context, ip)
+                              )''')
         self._conn.execute('''CREATE TABLE IF NOT EXISTS bytes_per_flow (
                                node_id text NOT NULL,
                                bytes integer NOT NULL,
@@ -86,6 +101,26 @@ class BismarkPassiveSqliteDatabase(object):
                                   count integer NOT NULL,
                                   UNIQUE (node_id, device, seconds)
                               )''')
+
+    def import_bytes_per_ip(self, bytes_per_ip):
+        self._conn.execute('DELETE FROM bytes_per_ip')
+        args = []
+        for (node_id, anonymization_id, ip), count in bytes_per_ip.iteritems():
+            args.append((node_id, anonymization_id, ip, count))
+        self._conn.executemany('''INSERT INTO bytes_per_ip
+                                  (node_id, anonymization_context, ip, count)
+                                  VALUES (?, ?, ?, ?)''', args)
+        self._conn.commit()
+
+    def import_packets_per_ip(self, packets_per_ip):
+        self._conn.execute('DELETE FROM packets_per_ip')
+        args = []
+        for (node_id, anonymization_id, ip), count in packets_per_ip.iteritems():
+            args.append((node_id, anonymization_id, ip, count))
+        self._conn.executemany('''INSERT INTO packets_per_ip
+                                  (node_id, anonymization_context, ip, count)
+                                  VALUES (?, ?, ?, ?)''', args)
+        self._conn.commit()
 
     def import_bytes_per_flow(self, bytes_per_flow):
         self._conn.execute('DELETE FROM bytes_per_flow')

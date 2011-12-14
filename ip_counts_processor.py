@@ -1,4 +1,4 @@
-from database_session_processor import DatabaseProcessorCoordinator
+from sqlite_session_processor import SqliteProcessorCoordinator
 from session_processor import SessionProcessor
 import utils
 
@@ -31,7 +31,7 @@ class IpCountsSessionProcessor(SessionProcessor):
                                    context.anonymization_id,
                                    ip] += 1
 
-class IpCountsProcessorCoordinator(DatabaseProcessorCoordinator):
+class IpCountsProcessorCoordinator(SqliteProcessorCoordinator):
     persistent_state = dict(
             bytes_per_ip=\
                     (utils.initialize_int_dict, utils.sum_dicts),

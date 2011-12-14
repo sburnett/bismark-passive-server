@@ -1,4 +1,4 @@
-from database_session_processor import DatabaseProcessorCoordinator
+from postgres_session_processor import PostgresProcessorCoordinator
 from session_processor import SessionProcessor
 import utils
 
@@ -45,7 +45,7 @@ class PacketSizeSessionProcessor(SessionProcessor):
             context.packet_size_per_port_unmatched[context.node_id,
                                                    packet.size] += 1
 
-class PacketSizeProcessorCoordinator(DatabaseProcessorCoordinator):
+class PacketSizeProcessorCoordinator(PostgresProcessorCoordinator):
     persistent_state = dict(
             packet_size_per_port_tcp=\
                     (utils.initialize_int_pair_dict, utils.sum_pair_dicts),

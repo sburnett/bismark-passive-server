@@ -1,6 +1,6 @@
 from collections import namedtuple
 
-from database_session_processor import DatabaseProcessorCoordinator
+from postgres_session_processor import PostgresProcessorCoordinator
 from session_processor import SessionProcessor
 import utils
 
@@ -37,7 +37,7 @@ class UpdateStatisticsSessionProcessor(SessionProcessor):
                 = min(context.update_statistics_oldest_timestamps[context.node_id],
                       update.timestamp)
 
-class UpdateStatisticsProcessorCoordinator(DatabaseProcessorCoordinator):
+class UpdateStatisticsProcessorCoordinator(PostgresProcessorCoordinator):
     persistent_state = dict(update_statistics=(dict, utils.update_dict))
 
     def __init__(self, options):
