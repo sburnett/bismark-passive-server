@@ -194,6 +194,14 @@ CREATE TABLE packet_sizes_per_port (
     UNIQUE (node_id, port, protocol, packet_size)
 );
 
+CREATE TABLE domains_accessed (
+    id SERIAL PRIMARY KEY,
+    bismark_id varchar NOT NULL,
+    mac_address varchar NOT NULL,
+    domains text[],
+    UNIQUE (bismark_id, mac_address)
+);
+
 CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;
 SELECT execute('GRANT SELECT ON bismark_passive.'||tablename||' to abhishek;')
 FROM pg_tables WHERE schemaname = 'bismark_passive';

@@ -26,6 +26,9 @@ def initialize_max_timestamp_dict():
 def update_dict(first, second):
     second.update(first)
     return second
+def update_set(first, second):
+    second.update(first)
+    return second
 def sum_dicts(first, second):
     for key, value in first.iteritems():
         second[key] += value
