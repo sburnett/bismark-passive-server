@@ -1,7 +1,7 @@
 import psycopg2
 import psycopg2.extensions
 
-class BismarkPassiveDatabase(object):
+class BismarkPassivePostgresDatabase(object):
     def __init__(self, user, database):
         self._conn = psycopg2.connect(user=user, database=database)
         cur = self._conn.cursor()
@@ -160,6 +160,5 @@ class BismarkPassiveDatabase(object):
         for (node_id, anonymization_id, ip), count \
                 in packets_per_ip.iteritems():
             args.append((node_id, anonymization_id, ip, count))
-        cur.executemany('SELECT merge_packets_per_ip (%s, %s, %s, %s, %s)',
-                        args)
+        cur.executemany('SELECT merge_packets_per_ip (%s, %s, %s, %s)', args)
         self._conn.commit()

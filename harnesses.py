@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import errno
 from optparse import OptionParser
 from os import makedirs
@@ -7,6 +9,8 @@ from process_sessions import process_sessions
 
 from byte_count_processor import ByteCountProcessorCoordinator
 from correlation_processor import CorrelationProcessorCoordinator
+from domains_per_flow_processor import DomainsPerFlowProcessorCoordinator
+from flow_statistics_processor import FlowStatisticsProcessorCoordinator
 from ip_counts_processor import IpCountsProcessorCoordinator
 from packet_size_processor import PacketSizeProcessorCoordinator
 from update_statistics_processor import UpdateStatisticsProcessorCoordinator
@@ -15,7 +19,11 @@ from update_statistics_processor import UpdateStatisticsProcessorCoordinator
 # Coordinators are called in the given order once per update file.
 harnesses = {
         'dashboard': [CorrelationProcessorCoordinator,
+                      DomainsPerFlowProcessorCoordinator,
                       ByteCountProcessorCoordinator],
+        'flow_statistics': [CorrelationProcessorCoordinator,
+                            DomainsPerFlowProcessorCoordinator,
+                            FlowStatisticsProcessorCoordinator],
         'ip_counts': [CorrelationProcessorCoordinator,
                       IpCountsProcessorCoordinator],
         'packet_size': [CorrelationProcessorCoordinator,
@@ -26,6 +34,8 @@ harnesses = {
 def parse_coordinator_args(parser):
     """Add arguments for your custom coordinator here. Keep arguments in
     alphabetical order. Don't use short options in this function."""
+    parser.add_option('--db_filename', action='store', dest='db_filename',
+                      help='Sqlite database filename')
     parser.add_option('--db_name', action='store', dest='db_name',
                       default='bismark_openwrt_live_v0_1',
                       help='Database name')
