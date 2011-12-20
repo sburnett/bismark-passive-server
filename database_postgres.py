@@ -2,8 +2,13 @@ import psycopg2
 import psycopg2.extensions
 
 class BismarkPassivePostgresDatabase(object):
-    def __init__(self, user, database):
-        self._conn = psycopg2.connect(user=user, database=database)
+    def __init__(self, user, password, host, port, database):
+        self._conn = psycopg2.connect(user=user, 
+                                    password = password,
+                                    host = host,
+                                    port = port,
+                                    database=database,
+                                    sslmode = 'allow')
         cur = self._conn.cursor()
         cur.execute('SET search_path TO bismark_passive')
         cur.close()
@@ -161,4 +166,14 @@ class BismarkPassivePostgresDatabase(object):
                 in packets_per_ip.iteritems():
             args.append((node_id, anonymization_id, ip, count))
         cur.executemany('SELECT merge_packets_per_ip (%s, %s, %s, %s)', args)
+        self._conn.commit()
+
+    def import_domains_statistics(self, domains_accessed):
+        cur = self._conn.cursor()
+        args = []
+        for (bismark_id, mac_address), domains in domains_accessed.iteritems():
+            args.append((bismark_id, mac_address, list(domains)))
+
+        cur.executemany('''SELECT merge_domains_accessed(%s, %s, %s)''',
+                        args)
         self._conn.commit()

@@ -14,6 +14,7 @@ from flow_statistics_processor import FlowStatisticsProcessorCoordinator
 from ip_counts_processor import IpCountsProcessorCoordinator
 from packet_size_processor import PacketSizeProcessorCoordinator
 from update_statistics_processor import UpdateStatisticsProcessorCoordinator
+from domain_processor import DomainProcessorCoordinator
 
 # Add new processing harnesses here. Keep the names in alphabetical order.
 # Coordinators are called in the given order once per update file.
@@ -29,6 +30,8 @@ harnesses = {
         'packet_size': [CorrelationProcessorCoordinator,
                         PacketSizeProcessorCoordinator],
         'updates': [UpdateStatisticsProcessorCoordinator],
+        'domains_accessed': [CorrelationProcessorCoordinator,
+                        DomainProcessorCoordinator],
         }
 
 def parse_coordinator_args(parser):
@@ -41,6 +44,12 @@ def parse_coordinator_args(parser):
                       help='Database name')
     parser.add_option('--db_user', action='store', dest='db_user',
                       default='sburnett', help='Database username')
+    parser.add_option('--db_host', action='store', dest='db_host',
+                      default='localhost', help='Database hostname')
+    parser.add_option('--db_password', action='store', dest='db_password',
+                      default="", help='Database password')
+    parser.add_option('--db_port', action='store', dest='db_port',
+                      default=5432, help = 'Database port')
     parser.add_option('--db_rebuild', action='store_true',
                       dest='db_rebuild', default=False,
                       help='Rebuild database from scratch (advanced)')

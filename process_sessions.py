@@ -18,6 +18,31 @@ def process_session(session,
                     processors,
                     update_files,
                     updates_directory):
+    """
+        Args:
+
+        session: namedtuple Session
+            - node_id
+            - anonymization_context
+            - session_id 
+        session_context_manager: SessionContextManager
+            provides the functions for creating context, loading context and
+            finally mergin contexts
+        pickle_root: String
+            pickle directory given as a commandline argument
+        result_pickle_root: String
+            directory for storing the intermediate result pickle files. Defaults
+            to /dev/shm but can be modified with a commandline parameter
+        processors: list
+            list of children of SessionProcessor class, provide the
+            process_update function as needed by the processor
+        update_files: list
+            [(tarname, filename), ..] list of the tuples which belong to this
+            node and session
+        updates_directory: String
+            the directory of updates that has all the tar files, is given as a
+            command line argument
+    """
     pickle_filename = '%s_%s_%s.pickle' \
             % (session.node_id, session.anonymization_context, str(session.id))
     pickle_path = join(pickle_root, pickle_filename)
@@ -67,6 +92,7 @@ def process_sessions_real(coordinators,
                           pickle_root,
                           result_pickle_root,
                           num_workers=None):
+    """ The main function for processing the updates """
     if num_workers != 0:
         pool = Pool(processes=num_workers)
 
@@ -129,6 +155,30 @@ def process_sessions(coordinators,
                      temp_pickles_dir='/dev/shm',
                      num_workers=None,
                      refresh_index=True):
+    """
+        Args:
+        coordinators: list
+            list of the coordinator objects which were provided in the main
+            function of process_session_updates
+        updates_directory: String
+            the directory of updates that has all the tar files, is given as a
+            command line argument
+        index_filename: String
+            the file which is the basis of index sqlite database. This is given
+            as a command line argument
+        pickle_root: String
+            pickle directory given as a commandline argument
+        temp_pickles_dir:
+            directory for storing the intermediate result pickle files. Defaults
+            to /dev/shm but can be modified with a commandline parameter
+        num_workers: Integer
+            the number of threads that the process can use when multiprocessing
+            the updates. Can be provided as a commandline argument
+        refresh_index: boolean
+            when this is set to True then sqlite database which contains the
+            indexing of tar file names to update file names, is refreshed.
+            Recommended setting is True.
+    """
     if refresh_index:
         print 'Indexing new updates'
         index_traces(updates_directory, index_filename)
