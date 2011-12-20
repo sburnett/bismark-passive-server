@@ -59,8 +59,4 @@ class DomainProcessorCoordinator(PostgresProcessorCoordinator):
         return DomainSessionProcessor()
 
     def write_to_database(self, database, global_context):
-        domains_file = open('domains_accessed.txt', 'w') 
-        for (bismark_id, mac_address), domains in global_context.domains_accessed.iteritems():
-            domains_file.write(bismark_id + " " + mac_address + " " +\
-                str(domains) + "\n")
         database.import_domains_statistics(global_context.domains_accessed)
