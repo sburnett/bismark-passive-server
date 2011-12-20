@@ -8,6 +8,7 @@ import inspect
 class DomainSessionProcessor(SessionProcessor):
     def __init__(self):
         super(DomainSessionProcessor, self).__init__()
+        self.message_printed = False
     
     def process_update(self, context, update):
         for offset, address in enumerate(update.addresses):
@@ -25,6 +26,9 @@ class DomainSessionProcessor(SessionProcessor):
     def process_a_record(self, context, bismark_id, a_record):
         if a_record.anonymized:
             return
+        if not self.message_printed:
+            print 'Adding an address record'
+            self.message_printed = True
         mac_address = context.address_id_map[a_record.address_id]
         device_key = bismark_id, mac_address
         domain = a_record.domain
@@ -33,6 +37,9 @@ class DomainSessionProcessor(SessionProcessor):
     def process_cname_record(self, context, bismark_id, cname_record):
         if cname_record.anonymized:
             return
+        if not self.message_printed:
+            print 'Adding an address record'
+            self.message_printed = True
         mac_address = context.address_id_map[cname_record.address_id]
         device_key = bismark_id, mac_address
         domain = cname_record.domain
@@ -52,4 +59,8 @@ class DomainProcessorCoordinator(PostgresProcessorCoordinator):
         return DomainSessionProcessor()
 
     def write_to_database(self, database, global_context):
+        domains_file = open('domains_accessed.txt', 'w') 
+        for (bismark_id, mac_address), domains in global_context.domains_accessed.iteritems():
+            domains_file.write(bismark_id + " " + mac_address + " " +\
+                str(domains) + "\n")
         database.import_domains_statistics(global_context.domains_accessed)

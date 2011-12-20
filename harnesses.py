@@ -87,7 +87,6 @@ def main():
         if e.errno != errno.EEXIST:
             raise
     coordinators = map(lambda cl: cl(options), harnesses[args['harness']])
-    print coordinators
     process_sessions(coordinators,
                      args['updates_directory'],
                      args['index_filename'],
