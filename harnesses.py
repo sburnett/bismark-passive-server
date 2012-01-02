@@ -47,7 +47,7 @@ def parse_coordinator_args(parser):
     parser.add_option('--db_host', action='store', dest='db_host',
                       default='localhost', help='Database hostname')
     parser.add_option('--db_password', action='store', dest='db_password',
-                      default="", help='Database password')
+                      default='', help='Database password')
     parser.add_option('--db_port', action='store', dest='db_port',
                       default=5432, help = 'Database port')
     parser.add_option('--db_rebuild', action='store_true',

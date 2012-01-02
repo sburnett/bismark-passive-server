@@ -4,12 +4,12 @@ import psycopg2.extensions
 class BismarkPassivePostgresDatabase(object):
     def __init__(self, user, password, host, port, database):
         self._conn = psycopg2.connect(user=user, 
-                                    password = password,
-                                    host = host,
-                                    port = port,
-                                    database=database,
-                                    sslmode = 'allow')
-        cur = self._conn.cursor()
+                                      password = password,
+                                      host = host,
+                                      port = port,
+                                      database=database,
+                                      sslmode = 'allow')
+        cur = self._conn.cursor()  
         cur.execute('SET search_path TO bismark_passive')
         cur.close()
         self._conn.commit()
