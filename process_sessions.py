@@ -63,7 +63,11 @@ def process_session(session,
             tarball = tarfile.open(full_tarname, 'r')
         tarhandle = tarball.extractfile(filename)
         update_content = GzipFile(fileobj=tarhandle).read()
-        update = PassiveUpdate(update_content)
+        try:
+            update = PassiveUpdate(update_content)
+        except:
+            print '%s:%s filename skipped: parser error' % (tarname, filename)
+            continue
         if update.sequence_number == context.last_sequence_number_processed + 1:
             for processor in processors:
                 processor.process_update(context, update)
