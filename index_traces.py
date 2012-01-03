@@ -29,7 +29,12 @@ def index_traces(updates_directory, index_filename):
             tarball = tarfile.open(tarname, 'r')
             for tarmember in tarball.getmembers():
                 tarhandle = tarball.extractfile(tarmember.name)
-                update_content = GzipFile(fileobj=tarhandle).read()
+                try:
+                    update_content = GzipFile(fileobj=tarhandle).read()
+                except IOError:
+                    print 'skipping', tarname, '(IO Error)'
+                    continue
+
                 update = PassiveUpdate(update_content, onlyheaders=True)
                 if update.anonymized:
                     signature = update.anonymization_signature
