@@ -173,7 +173,7 @@ class BismarkPassivePostgresDatabase(object):
         args = []
         for (bismark_id, mac_address, day), visibility in\
             device_visibility.iteritems():
-            args.append((bismark_id, mac_address, day, visibility))
+            args.append((bismark_id, mac_address, day, len(visibility)))
 
         cur.executemany('''SELECT merge_device_visibility(%s, %s, %s, %s)''',\
             args)
