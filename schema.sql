@@ -208,7 +208,7 @@ CREATE TABLE device_visibility (
     bismark_id varchar NOT NULL,
     mac_address varchar NOT NULL,
     day DATE NOT NULL,
-    visibility integer not NULL,
+    visibility integer,
     UNIQUE (bismark_id, mac_address, day)
 );
 
