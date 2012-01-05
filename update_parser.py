@@ -14,6 +14,7 @@ DnsCnameEntry = namedtuple('DnsCnameEntry',
                            ['packet_id', 'address_id', 'anonymized',
                                'domain', 'cname', 'ttl'])
 AddressEntry = namedtuple('AddressEntry', ['mac_address', 'ip_address'])
+HttpUrlEntry = namedtuple('HttpUrlEntry', ['flow_id', 'hashed_url'])
 
 ##############################################################################
 # IMPORTANT: These values must match the identifiers of the same names in
@@ -61,6 +62,10 @@ class PassiveUpdate(object):
                 }
         try:
             sections['drop_statistics'] = blocks[8]
+        except IndexError:
+            pass
+        try:
+            sections['http_urls'] = blocks[9]
         except IndexError:
             pass
 
@@ -169,3 +174,13 @@ class PassiveUpdate(object):
             for line in sections['drop_statistics']:
                 size, count = line.split()
                 self.dropped_packets[int(size)] = int(count)
+
+        if 'http_urls' in sections:
+            self.dropped_http_urls = int(sections['http_urls'][0])
+            self.http_urls = []
+            for line in sections['http_urls'][1:]:
+                flow_id, _, hashed_url = line.split()
+                self.http_urls.append(HttpUrlEntry(
+                    flow_id = int(flow_id),
+                    hashed_url = hashed_url,
+                    ))
