@@ -203,15 +203,6 @@ CREATE TABLE domains_accessed (
     UNIQUE (bismark_id, mac_address, domain)
 );
 
-CREATE TABLE device_visibility (
-    id SERIAL PRIMARY KEY,
-    bismark_id varchar NOT NULL,
-    mac_address varchar NOT NULL,
-    day DATE NOT NULL,
-    visibility integer,
-    UNIQUE (bismark_id, mac_address, day)
-);
-
 CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;
 SELECT execute('GRANT SELECT ON bismark_passive.'||tablename||' to abhishek;')
 FROM pg_tables WHERE schemaname = 'bismark_passive';

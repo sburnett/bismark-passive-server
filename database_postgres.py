@@ -168,24 +168,13 @@ class BismarkPassivePostgresDatabase(object):
         cur.executemany('SELECT merge_packets_per_ip (%s, %s, %s, %s)', args)
         self._conn.commit()
 
-    def import_device_visiblity(self, device_visibility):
-        cur = self._conn.cursor()
-        args = []
-        for (bismark_id, mac_address, day), visibility in\
-            device_visibility.iteritems():
-            args.append((bismark_id, mac_address, day, len(visibility)))
-
-        cur.executemany('''SELECT merge_device_visibility(%s, %s, %s, %s)''',\
-            args)
-        self._conn.commit()
-            
     def import_domains_statistics(self, domains_accessed):
         cur = self._conn.cursor()
         args = []
         for (bismark_id, mac_address, domain), dates in\
             domains_accessed.iteritems():
             args.append((bismark_id, mac_address, domain,\
-                sorted(list(set(dates)))))
+                sorted(dates)))
 
         cur.executemany('''SELECT merge_domains_accessed(%s, %s, %s, %s)''',\
                         args)

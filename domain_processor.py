@@ -12,13 +12,11 @@ class DomainSessionProcessor(SessionProcessor):
     def process_update(self, context, update):
         update_date = datetime.date(update.timestamp)
         update_hour = update.timestamp.replace(minute = 0, second = 0,\
-            mirosecond = 0)
+            microsecond = 0)
         for offset, address in enumerate(update.addresses):
             index = (update.address_table_first_id + offset) \
                     % update.address_table_size
             context.address_id_map[index] = address.mac_address
-            context.device_visibility[address.mac_address,\
-                update_date].add(update_hour)
 
         for a_record in update.a_records:
             self.process_a_record(context, update.bismark_id,\
@@ -33,9 +31,8 @@ class DomainSessionProcessor(SessionProcessor):
         mac_address = context.address_id_map[a_record.address_id]
         domain = a_record.domain
         record_key = bismark_id, mac_address, domain
-        context.domains_accessed[record_key].append(\
-            datetime.date(timestamp.replace(hour = 0, minute = 0,\
-            second = 0, microsecond = 0)))
+        context.domains_accessed[record_key].add(\
+            datetime.date(timestamp))
     
     def process_cname_record(self, context, bismark_id, c_record, timestamp):
         if c_record.anonymized:
@@ -43,9 +40,8 @@ class DomainSessionProcessor(SessionProcessor):
         mac_address = context.address_id_map[c_record.address_id]
         domain = c_record.domain
         record_key = bismark_id, mac_address, domain
-        context.domains_accessed[record_key].append(\
-            datetime.date(timestamp.replace(hour = 0, minute = 0,\
-            second = 0, microsecond = 0)))
+        context.domains_accessed[record_key].add(\
+            datetime.date(timestamp))
                 
 class DomainProcessorCoordinator(PostgresProcessorCoordinator):
     '''
@@ -61,10 +57,8 @@ class DomainProcessorCoordinator(PostgresProcessorCoordinator):
     '''
     persistent_state = dict(
             address_id_map = (dict, None),
-            domains_accessed = (utils.initialize_list_dict,\
-                utils.sum_dicts),
-            device_visibility = (utils.initialize_set_dict,\
-                utils.sum_dicts),
+            domains_accessed = (utils.initialize_set_dict,\
+                utils.union_set_dicts),
             )
     ephemeral_state = dict()
     
@@ -76,4 +70,3 @@ class DomainProcessorCoordinator(PostgresProcessorCoordinator):
 
     def write_to_database(self, database, global_context):
         database.import_domains_statistics(global_context.domains_accessed)
-        database.import_device_visiblity(global_context.device_visibility)
