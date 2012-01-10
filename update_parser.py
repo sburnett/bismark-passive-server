@@ -11,8 +11,9 @@ DnsAEntry = namedtuple('DnsAEntry',
                        ['packet_id', 'address_id', 'anonymized',
                            'domain', 'ip_address', 'ttl'])
 DnsCnameEntry = namedtuple('DnsCnameEntry',
-                           ['packet_id', 'address_id', 'anonymized',
-                               'domain', 'cname', 'ttl'])
+                           ['packet_id', 'address_id',
+                               'domain_anonymized', 'domain',
+                               'cname_anonymized', 'cname', 'ttl'])
 AddressEntry = namedtuple('AddressEntry', ['mac_address', 'ip_address'])
 HttpUrlEntry = namedtuple('HttpUrlEntry', ['flow_id', 'hashed_url'])
 
@@ -147,13 +148,22 @@ class PassiveUpdate(object):
 
         self.cname_records = []
         for line in sections['dns_table_cname']:
-            packet_id, address_id, anonymized, domain, cname, ttl \
-                    = line.split()
+            try:
+                packet_id, address_id, \
+                        domain_anonymized, domain, \
+                        cname_anonymized, cname, ttl \
+                        = line.split()
+            except ValueError:
+                packet_id, address_id, domain_anonymized, domain, cname, ttl \
+                        = line.split()
+                cname_anonymized = domain_anonymized
+
             self.cname_records.append(DnsCnameEntry(
                 packet_id = int(packet_id),
                 address_id = int(address_id),
-                anonymized = int(anonymized),
+                domain_anonymized = int(domain_anonymized),
                 domain = domain,
+                cname_anonymized = int(cname_anonymized),
                 cname = cname,
                 ttl = datetime.timedelta(seconds=int(ttl)),
                 ))
