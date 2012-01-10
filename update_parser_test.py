@@ -168,8 +168,8 @@ class TestParser(unittest.TestCase):
                     9 12 0 foo.com 123cd 2
                     8 34 1 bar.org ae321 34
 
-                    7 45 1 blah.cn blorg.us 93
-                    6 56 0 gorp.com boink.ca 28
+                    7 45 1 blah.cn 0 blorg.us 93
+                    6 56 0 gorp.com 1 boink.ca 28
 
                     0 0"""
         update = update_parser.PassiveUpdate(format_source(source))
@@ -191,14 +191,16 @@ class TestParser(unittest.TestCase):
         self.assertTrue(len(update.cname_records) == 2)
         self.assertTrue(update.cname_records[0].packet_id == 7)
         self.assertTrue(update.cname_records[0].address_id == 45)
-        self.assertTrue(update.cname_records[0].anonymized == 1)
+        self.assertTrue(update.cname_records[0].domain_anonymized == 1)
         self.assertTrue(update.cname_records[0].domain == 'blah.cn')
+        self.assertTrue(update.cname_records[0].cname_anonymized == 0)
         self.assertTrue(update.cname_records[0].cname == 'blorg.us')
         self.assertTrue(update.cname_records[0].ttl.seconds == 93)
         self.assertTrue(update.cname_records[1].packet_id == 6)
         self.assertTrue(update.cname_records[1].address_id == 56)
-        self.assertTrue(update.cname_records[1].anonymized == 0)
+        self.assertTrue(update.cname_records[1].domain_anonymized == 0)
         self.assertTrue(update.cname_records[1].domain == 'gorp.com')
+        self.assertTrue(update.cname_records[1].cname_anonymized == 1)
         self.assertTrue(update.cname_records[1].cname == 'boink.ca')
         self.assertTrue(update.cname_records[1].ttl.seconds == 28)
 
