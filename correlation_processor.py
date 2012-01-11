@@ -50,26 +50,27 @@ class CorrelationSessionProcessor(SessionProcessor):
             context.flows[flow.flow_id] = flow, {}
 
     def process_a_record(self, context, a_record, a_packet):
-        if a_record.anonymized:
-            return
-        domain_key = (a_record.address_id, a_record.domain)
+        domain_key = (a_record.address_id, a_record.anonymized, a_record.domain)
         context.dns_a_map_domain[domain_key].append(a_record)
-        for domain, pattern in context.whitelist:
-            if pattern.search(a_record.domain) is not None:
-                ip_key = (a_record.address_id, a_record.ip_address)
-                domain_record = (domain,
-                                 a_packet.timestamp,
-                                 a_packet.timestamp + a_record.ttl)
-                context.dns_ip_map[ip_key].add(domain_record)
+        if not a_record.anonymized:
+            for domain, pattern in context.whitelist:
+                if pattern.search(a_record.domain) is not None:
+                    ip_key = (a_record.address_id, a_record.ip_address)
+                    domain_record = (domain,
+                                     a_packet.timestamp,
+                                     a_packet.timestamp + a_record.ttl)
+                    context.dns_ip_map[ip_key].add(domain_record)
 
     def process_cname_record(self, context, cname_record, packet_series):
-        if cname_record.anonymized:
+        if cname_record.domain_anonymized:
             return
         try:
             cname_packet = packet_series[cname_record.packet_id]
         except IndexError:
             return
-        domain_key = (cname_record.address_id, cname_record.cname)
+        domain_key = (cname_record.address_id,
+                      cname_record.cname_anonymized,
+                      cname_record.cname)
         a_records = context.dns_a_map_domain.get(domain_key)
         if a_records is None:
             return
