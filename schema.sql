@@ -198,8 +198,9 @@ CREATE TABLE domains_accessed (
     id SERIAL PRIMARY KEY,
     bismark_id varchar NOT NULL,
     mac_address varchar NOT NULL,
-    domains text[],
-    UNIQUE (bismark_id, mac_address)
+    domain varchar NOT NULL,
+    dates DATE[],
+    UNIQUE (bismark_id, mac_address, domain)
 );
 
 CREATE OR REPLACE FUNCTION execute(text) returns void as $BODY$BEGIN execute $1; END;$BODY$ language plpgsql;

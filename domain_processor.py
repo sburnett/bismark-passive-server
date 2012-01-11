@@ -3,13 +3,16 @@ import re
 from session_processor import SessionProcessor
 from postgres_session_processor import PostgresProcessorCoordinator 
 import utils
-import inspect
+from datetime import datetime
 
 class DomainSessionProcessor(SessionProcessor):
     def __init__(self):
         super(DomainSessionProcessor, self).__init__()
     
     def process_update(self, context, update):
+        update_date = datetime.date(update.timestamp)
+        update_hour = update.timestamp.replace(minute = 0, second = 0,\
+            microsecond = 0)
         for offset, address in enumerate(update.addresses):
             index = (update.address_table_first_id + offset) \
                     % update.address_table_size
@@ -17,31 +20,45 @@ class DomainSessionProcessor(SessionProcessor):
 
         for a_record in update.a_records:
             self.process_a_record(context, update.bismark_id,\
-                a_record)
+                a_record, update.timestamp)
         for cname_record in update.cname_records:
             self.process_cname_record(context, update.bismark_id,\
-                cname_record)
+                cname_record, update.timestamp)
     
-    def process_a_record(self, context, bismark_id, a_record):
+    def process_a_record(self, context, bismark_id, a_record, timestamp):
         if a_record.anonymized:
             return
         mac_address = context.address_id_map[a_record.address_id]
-        device_key = bismark_id, mac_address
         domain = a_record.domain
-        context.domains_accessed[device_key].add(domain)
+        record_key = bismark_id, mac_address, domain
+        context.domains_accessed[record_key].add(\
+            datetime.date(timestamp))
     
-    def process_cname_record(self, context, bismark_id, cname_record):
-        if cname_record.anonymized:
+    def process_cname_record(self, context, bismark_id, c_record, timestamp):
+        if c_record.anonymized:
             return
-        mac_address = context.address_id_map[cname_record.address_id]
-        device_key = bismark_id, mac_address
-        domain = cname_record.domain
-        context.domains_accessed[device_key].add(domain)
+        mac_address = context.address_id_map[c_record.address_id]
+        domain = c_record.domain
+        record_key = bismark_id, mac_address, domain
+        context.domains_accessed[record_key].add(\
+            datetime.date(timestamp))
                 
 class DomainProcessorCoordinator(PostgresProcessorCoordinator):
+    '''
+        address_id_map: 
+            keeps a map from address_id to mac address to look up the mac
+            address when we see a certain address_id
+        domains_accessed: 
+            for each device, domain, store the dates on which it was accessed
+        device_visibility: 
+            for each device and date stores the hours on which
+            the device was visible. Can generate a score of 0-24 to see the 
+            number of hours in a day that the device was visible
+    '''
     persistent_state = dict(
             address_id_map = (dict, None),
-            domains_accessed = (utils.initialize_set_dict, utils.update_set),
+            domains_accessed = (utils.initialize_set_dict,\
+                utils.union_set_dicts),
             )
     ephemeral_state = dict()
     

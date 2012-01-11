@@ -29,6 +29,10 @@ def update_dict(first, second):
 def update_set(first, second):
     second.update(first)
     return second
+def union_set_dicts(first, second):
+    for key, dataset in first.iteritems():
+        second[key].update(dataset)
+    return second
 def sum_dicts(first, second):
     for key, value in first.iteritems():
         second[key] += value

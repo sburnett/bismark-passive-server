@@ -171,9 +171,11 @@ class BismarkPassivePostgresDatabase(object):
     def import_domains_statistics(self, domains_accessed):
         cur = self._conn.cursor()
         args = []
-        for (bismark_id, mac_address), domains in domains_accessed.iteritems():
-            args.append((bismark_id, mac_address, list(domains)))
+        for (bismark_id, mac_address, domain), dates in\
+            domains_accessed.iteritems():
+            args.append((bismark_id, mac_address, domain,\
+                sorted(dates)))
 
-        cur.executemany('''SELECT merge_domains_accessed(%s, %s, %s)''',
+        cur.executemany('''SELECT merge_domains_accessed(%s, %s, %s, %s)''',\
                         args)
         self._conn.commit()

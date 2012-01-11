@@ -66,7 +66,7 @@ def process_session(session,
         try:
             update = PassiveUpdate(update_content)
         except:
-            print '%s:%s filename skipped: parser error' % (tarname, filename)
+            # print '%s:%s filename skipped: parser error' % (tarname, filename)
             continue
         if update.sequence_number == context.last_sequence_number_processed + 1:
             for processor in processors:
