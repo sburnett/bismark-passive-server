@@ -170,6 +170,7 @@ CREATE TABLE update_statistics (
     id SERIAL PRIMARY KEY,
     node_id varchar NOT NULL,
     eventstamp timestamp with time zone NOT NULL,
+    file_format_version integer NOT NULL,
     pcap_dropped integer NOT NULL,
     iface_dropped integer NOT NULL,
     packet_series_dropped integer NOT NULL,

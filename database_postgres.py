@@ -136,6 +136,7 @@ class BismarkPassivePostgresDatabase(object):
             if eventstamp >= oldest_timestamps[node_id]:
                 args.append(
                         (node_id, eventstamp,
+                            statistics.file_format_version,
                             statistics.pcap_dropped,
                             statistics.iface_dropped,
                             statistics.packet_series_dropped,
@@ -147,7 +148,7 @@ class BismarkPassivePostgresDatabase(object):
                             statistics.a_records_size,
                             statistics.cname_records_size))
         cur.executemany('''SELECT merge_update_statistics
-                           (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                           (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
                         args)
         self._conn.commit()
 

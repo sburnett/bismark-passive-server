@@ -5,7 +5,8 @@ from session_processor import SessionProcessor
 import utils
 
 UpdateStatistics = namedtuple('UpdateStatistics',
-                              ['pcap_dropped',
+                              ['file_format_version',
+                               'pcap_dropped',
                                'iface_dropped',
                                'packet_series_dropped',
                                'flow_table_dropped',
@@ -23,6 +24,7 @@ class UpdateStatisticsSessionProcessor(SessionProcessor):
     def process_update(self, context, update):
         context.update_statistics[context.node_id, update.timestamp] \
                 = UpdateStatistics(
+                        file_format_version=update.file_format_version,
                         pcap_dropped=update.pcap_dropped,
                         iface_dropped=update.iface_dropped,
                         packet_series_dropped=update.packet_series_dropped,
