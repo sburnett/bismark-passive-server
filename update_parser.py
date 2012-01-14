@@ -185,7 +185,7 @@ class PassiveUpdate(object):
                 try:
                     size, count = line.split()
                 except ValueError:
-                    if self.file_format_version == 3:
+                    if self.file_format_version <= 3:
                         sections['http_urls'] = sections['drop_statistics']
                         break
                 self.dropped_packets[int(size)] = int(count)
