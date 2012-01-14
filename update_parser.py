@@ -191,11 +191,17 @@ class PassiveUpdate(object):
                 self.dropped_packets[int(size)] = int(count)
 
         if 'http_urls' in sections:
-            self.dropped_http_urls = int(sections['http_urls'][0])
-            self.http_urls = []
-            for line in sections['http_urls'][1:]:
-                flow_id, _, hashed_url = line.split()
-                self.http_urls.append(HttpUrlEntry(
-                    flow_id = int(flow_id),
-                    hashed_url = hashed_url,
-                    ))
+            try:
+                self.dropped_http_urls = int(sections['http_urls'][0])
+                self.http_urls = []
+                for line in sections['http_urls'][1:]:
+                    flow_id, _, hashed_url = line.split()
+                    self.http_urls.append(HttpUrlEntry(
+                        flow_id = int(flow_id),
+                        hashed_url = hashed_url,
+                        ))
+            except:
+                if self.file_format_version <= 3:
+                    pass
+                else:
+                    raise
