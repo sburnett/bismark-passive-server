@@ -190,10 +190,12 @@ def process_sessions(coordinators,
         index_traces(updates_directory, index_filename)
     result_pickle_root = join(temp_pickles_dir, str(getpid()))
     makedirs(result_pickle_root)
-    process_sessions_real(coordinators,
-                          updates_directory,
-                          index_filename,
-                          pickle_root,
-                          result_pickle_root,
-                          num_workers)
-    rmtree(result_pickle_root)
+    try:
+        process_sessions_real(coordinators,
+                              updates_directory,
+                              index_filename,
+                              pickle_root,
+                              result_pickle_root,
+                              num_workers)
+    finally:
+        rmtree(result_pickle_root)
