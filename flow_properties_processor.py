@@ -41,6 +41,6 @@ class FlowPropertiesSessionProcessor(SessionProcessor):
             if flow_data is not None:
                 domains = flow_data['domains']
             else:
-                domains = ['unknwon']
+                domains = ['unknown']
 
             self.process_packet(context, packet, port, device_names, domains)
