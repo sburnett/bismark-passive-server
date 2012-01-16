@@ -86,13 +86,13 @@ def plot_updates(conn, max_age=None, filename='plots/updates.pdf'):
     plt.savefig(filename)
 
 def main():
-    #os.system('nice -n 5'
-    #          ' python /home/sburnett/git/bismark-passive-server/harnesses.py'
-    #          ' updates'
-    #          ' /data/users/bismark/data/passive'
-    #          ' /data/users/bismark/data/passive/index.sqlite'
-    #          ' /data/users/sburnett/passive_pickles'
-    #          ' --db_filename=/data/users/sburnett/updates.sqlite')
+    os.system('nice -n 5'
+              ' python /home/sburnett/git/bismark-passive-server/harnesses.py'
+              ' updates'
+              ' /data/users/bismark/data/passive'
+              ' /data/users/bismark/data/passive/index.sqlite'
+              ' /data/users/sburnett/passive_pickles'
+              ' --db_filename=/data/users/sburnett/updates.sqlite')
     conn = sqlite3.connect('/data/users/sburnett/updates.sqlite')
     print 'Plotting daily status'
     plot_updates(
