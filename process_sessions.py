@@ -76,6 +76,8 @@ def process_session(session,
         else:
             print '%s:%s filename skipped: bad sequence number' \
                     % (tarname, filename)
+            if update.sequence_number > context.last_sequence_number_processed:
+                break
     del update_files
     if processed_new_update:
         session_context_manager.save_persistent_context(context, pickle_path)
