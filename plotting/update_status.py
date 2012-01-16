@@ -3,7 +3,7 @@
 from collections import defaultdict
 import datetime
 import matplotlib.pyplot as plt
-from matplotlib.dates import DayLocator, HourLocator, DateFormatter
+from matplotlib.dates import AutoDateFormatter, AutoDateLocator
 import os
 import sqlite3
 
@@ -69,12 +69,9 @@ def plot_updates(conn, max_age=None, filename='plots/updates.pdf'):
         ax.vlines(*zip(*outage_points), lw=2, color='r')
     ax.set_xlabel('Date')
     ax.set_ylabel('Bismark Node ID')
-    ax.xaxis.set_major_formatter(DateFormatter('%Y-%m-%d'))
-    ax.xaxis.set_minor_locator(DayLocator())
-    if max_age is None:
-        ax.xaxis.set_major_locator(DayLocator(interval=7))
-    else:
-        ax.xaxis.set_major_locator(DayLocator(interval=1))
+    loc = AutoDateLocator()
+    ax.xaxis.set_major_locator(loc)
+    ax.xaxis.set_major_formatter(AutoDateFormatter(loc))
     fig.autofmt_xdate()
     plt.ylim(-1, len(node_ids))
     plt.axvline(datetime.datetime.utcnow())
