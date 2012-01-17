@@ -13,12 +13,10 @@ class DomainsPerFlowSessionProcessor(SessionProcessor):
             if 'domains' in flow_data:
                 continue
             flow_data['domains'] = set()
-            if flow.source_ip in context.address_map \
-                    and not flow.destination_ip_anonymized:
+            if flow.source_ip in context.address_map:
                 key = (context.address_map[flow.source_ip],
                        flow.destination_ip)
-            elif flow.destination_ip in context.address_map \
-                    and not flow.source_ip_anonymized:
+            elif flow.destination_ip in context.address_map:
                 key = (context.address_map[flow.destination_ip],
                        flow.source_ip)
             else:
