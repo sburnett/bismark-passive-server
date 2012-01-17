@@ -9,14 +9,6 @@ import matplotlib.cm as cm
 import numpy
 import psycopg2
 
-def connect(user='sburnett', database='bismark_openwrt_live_v0_1'):
-    conn = psycopg2.connect(user=user, database=database)
-    cur = conn.cursor()
-    cur.execute('SET search_path TO bismark_passive')
-    cur.close()
-    conn.commit()
-    return conn
-
 def plot_daily_traffic(conn, node):
     cur = conn.cursor()
     cur.execute('''SELECT eventstamp,bytes_transferred
