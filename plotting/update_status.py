@@ -10,10 +10,11 @@ import sqlite3
 UPDATE_TIMEOUT = datetime.timedelta(seconds=60)
 
 def plot_updates(conn, max_age=None, filename='plots/updates.pdf'):
+    current_time = datetime.datetime.utcnow()
     if max_age is None:
         oldest = datetime.datetime.min
     else:
-        oldest = datetime.datetime.utcnow() - max_age
+        oldest = current_time - max_age
     
     cur = conn.cursor()
     cur.execute('SELECT DISTINCT node_id FROM update_statistics')
@@ -74,7 +75,15 @@ def plot_updates(conn, max_age=None, filename='plots/updates.pdf'):
     ax.xaxis.set_major_formatter(AutoDateFormatter(loc))
     fig.autofmt_xdate()
     plt.ylim(-1, len(node_ids))
-    plt.axvline(datetime.datetime.utcnow())
+    plt.axvline(current_time)
+    plt.text(1, 0, 'Generated at %s' % current_time,
+             fontsize=8,
+             color='gray',
+             transform=fig.transFigure,
+             verticalalignment='bottom',
+             horizontalalignment='right')
+    #(lower, upper) = plt.xlim()
+    #plt.xlim(lower, upper + (upper - lower)*0.02)
     if max_age is None:
         plt.title('Passive data availability for all time')
     else:
