@@ -15,7 +15,8 @@ class BismarkPassiveSqliteDatabase(object):
                                   mac_address text NOT NULL,
                                   port integer NOT NULL,
                                   domain text NOT NULL,
-                                  bytes_transferred integer NOT NULL
+                                  bytes_transferred integer NOT NULL,
+                                  UNIQUE (node_id, anonymization_context, eventstamp, mac_address, port, domain)
                               )''')
         args = []
         for (node_id,

@@ -17,7 +17,8 @@ def process_session(session,
                     result_pickle_root,
                     processors,
                     update_files,
-                    updates_directory):
+                    updates_directory,
+                    multiprocessed):
     """
         Args:
 
@@ -52,11 +53,10 @@ def process_session(session,
                 session.node_id, session.anonymization_context, session.id)
     processed_new_update = False
     current_tarname = None
-    for tarname, filename in update_files:
-        if filename in context.filenames_processed:
-            continue
-        else:
-            processed_new_update = True
+    while (context.last_sequence_number_processed + 1) in update_files:
+        tarname, filename = \
+                update_files[context.last_sequence_number_processed + 1]
+        processed_new_update = True
         if current_tarname != tarname:
             current_tarname = tarname
             full_tarname = join(updates_directory, current_tarname)
@@ -67,30 +67,33 @@ def process_session(session,
             update = PassiveUpdate(update_content)
         except:
             print '%s:%s filename skipped: parser error' % (tarname, filename)
-            continue
-        if update.sequence_number == context.last_sequence_number_processed + 1:
-            for processor in processors:
-                processor.process_update(context, update)
-            context.last_sequence_number_processed = update.sequence_number
-            context.filenames_processed.add(filename)
-        else:
-            print '%s:%s filename skipped: bad sequence number' \
-                    % (tarname, filename)
-            if update.sequence_number > context.last_sequence_number_processed:
-                break
+            break
+        if update.sequence_number != context.last_sequence_number_processed + 1:
+            print '%s:%s has invalid sequence number' % (tarname, filename)
+            break
+        for processor in processors:
+            processor.process_update(context, update)
+        context.last_sequence_number_processed = update.sequence_number
     del update_files
     if processed_new_update:
+        print 'New update!'
         session_context_manager.save_persistent_context(context, pickle_path)
+        if not multiprocessed:
+            return context
         results_pickle_path = join(result_pickle_root, pickle_filename)
         session_context_manager.save_all_context(context, results_pickle_path)
     else:
+        print 'No new updates'
+        if not multiprocessed:
+            return context
         results_pickle_path = pickle_path
+    print results_pickle_path
     return results_pickle_path
 
 def process_session_wrapper(args):
-    results_pickle_path = process_session(*args)
+    result = process_session(*args)
     del args
-    return results_pickle_path
+    return result
 
 def process_sessions_real(coordinators,
                           updates_directory,
@@ -103,8 +106,6 @@ def process_sessions_real(coordinators,
         pool = Pool(processes=num_workers)
 
     session_context_manager = SessionContextManager()
-    session_context_manager.declare_persistent_state(
-            'filenames_processed', set, None)
     session_context_manager.declare_persistent_state(
             'last_sequence_number_processed', return_negative_one, None)
     for coordinator in coordinators:
@@ -131,14 +132,14 @@ def process_sessions_real(coordinators,
                              result_pickle_root,
                              processors,
                              update_files,
-                             updates_directory))
+                             updates_directory,
+                             num_workers != 0))
 
     print 'Processing sessions'
     global_context = GlobalContext()
     if num_workers == 0:
         for args in process_args:
-            pickle_path = process_session_wrapper(args)
-            session_context = session_context_manager.load_context(pickle_path)
+            session_context = process_session_wrapper(args)
             session_context_manager.merge_contexts(session_context, global_context)
             del session_context
     else:

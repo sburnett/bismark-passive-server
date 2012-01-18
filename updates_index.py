@@ -104,7 +104,7 @@ class UpdatesIndex(object):
                 id=row['session_id'])
 
     def session_data(self, session):
-        cur = self._conn.execute('''SELECT tarname, filename
+        cur = self._conn.execute('''SELECT sequence_number, tarname, filename
                                     FROM updates
                                     WHERE node_id = ?
                                     AND anonymization_context = ?
@@ -113,7 +113,7 @@ class UpdatesIndex(object):
                                  (session.node_id,
                                   session.anonymization_context,
                                   session.id))
-        data = []
+        data = {}
         for row in cur:
-            data.append((row['tarname'], row['filename']))
+            data[row['sequence_number']] = (row['tarname'], row['filename'])
         return data
