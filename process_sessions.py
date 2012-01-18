@@ -76,18 +76,15 @@ def process_session(session,
         context.last_sequence_number_processed = update.sequence_number
     del update_files
     if processed_new_update:
-        print 'New update!'
         session_context_manager.save_persistent_context(context, pickle_path)
         if not multiprocessed:
             return context
         results_pickle_path = join(result_pickle_root, pickle_filename)
         session_context_manager.save_all_context(context, results_pickle_path)
     else:
-        print 'No new updates'
         if not multiprocessed:
             return context
         results_pickle_path = pickle_path
-    print results_pickle_path
     return results_pickle_path
 
 def process_session_wrapper(args):
