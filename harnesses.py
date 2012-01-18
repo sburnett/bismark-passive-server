@@ -8,6 +8,7 @@ from os.path import join
 from process_sessions import process_sessions
 
 from byte_count_processor import ByteCountProcessorCoordinator
+from byte_statistics_processor import ByteStatisticsProcessorCoordinator
 from correlation_processor import CorrelationProcessorCoordinator
 from domains_per_flow_processor import DomainsPerFlowProcessorCoordinator
 from flow_statistics_processor import FlowStatisticsProcessorCoordinator
@@ -19,6 +20,9 @@ from domain_processor import DomainProcessorCoordinator
 # Add new processing harnesses here. Keep the names in alphabetical order.
 # Coordinators are called in the given order once per update file.
 harnesses = {
+        'byte_statistics': [CorrelationProcessorCoordinator,
+                            DomainsPerFlowProcessorCoordinator,
+                            ByteStatisticsProcessorCoordinator],
         'dashboard': [CorrelationProcessorCoordinator,
                       DomainsPerFlowProcessorCoordinator,
                       ByteCountProcessorCoordinator],

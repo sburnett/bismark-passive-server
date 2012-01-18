@@ -1,5 +1,5 @@
-from postgres_session_processor import PostgresProcessorCoordinator
 from flow_properties_processor import FlowPropertiesSessionProcessor
+from postgres_session_processor import PostgresProcessorCoordinator
 import utils
 
 class ByteCountSessionProcessor(FlowPropertiesSessionProcessor):

@@ -7,6 +7,42 @@ class BismarkPassiveSqliteDatabase(object):
 
         self._conn.execute('''PRAGMA journal_mode = MEMORY''')
 
+    def import_byte_statistics(self, data, oldest_timestamps):
+        self._conn.execute('''CREATE TABLE IF NOT EXISTS byte_statistics (
+                                  node_id text NOT NULL,
+                                  anonymization_context text NOT NULL,
+                                  eventstamp text NOT NULL,
+                                  mac_address text NOT NULL,
+                                  port integer NOT NULL,
+                                  domain text NOT NULL,
+                                  bytes_transferred integer NOT NULL
+                              )''')
+        args = []
+        for (node_id,
+             anonymization_context,
+             eventstamp,
+             mac_address,
+             port,
+             domain), bytes_transferred in data.iteritems():
+            if eventstamp >= oldest_timestamps[node_id, anonymization_context]:
+                args.append((node_id,
+                             anonymization_context,
+                             eventstamp,
+                             mac_address,
+                             port,
+                             domain,
+                             bytes_transferred))
+        self._conn.executemany('''INSERT OR REPLACE INTO byte_statistics
+                                  (node_id,
+                                   anonymization_context,
+                                   eventstamp,
+                                   mac_address, 
+                                   port,
+                                   domain,
+                                   bytes_transferred)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?)''', args)
+        self._conn.commit()
+
     def import_bytes_per_ip(self, bytes_per_ip):
         self._conn.execute('''CREATE TABLE IF NOT EXISTS bytes_per_ip (
                                node_id text NOT NULL,
