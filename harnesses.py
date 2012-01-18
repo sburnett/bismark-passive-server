@@ -69,6 +69,9 @@ def parse_args():
     parser.add_option('-w', '--workers', type='int', action='store',
                       dest='workers', default=None,
                       help='Maximum number of worker threads to use')
+    parser.add_option('-p', '--ignore-pickles', action='store_true',
+                      dest='ignore_pickles', default=False,
+                      help='Compute from scratch (use when processors change)')
     parser.add_option('-n', '--disable-refresh', action='store_true',
                       dest='disable_refresh', default=False,
                       help='Disable refresh of index before processing')
@@ -97,7 +100,8 @@ def main():
                      pickles_path,
                      options.temp_pickles_dir,
                      options.workers,
-                     not options.disable_refresh)
+                     not options.disable_refresh,
+                     options.ignore_pickles)
 
 if __name__ == '__main__':
     main()

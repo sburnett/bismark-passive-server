@@ -18,7 +18,8 @@ def process_session(session,
                     processors,
                     update_files,
                     updates_directory,
-                    multiprocessed):
+                    multiprocessed,
+                    ignore_pickles):
     """
         Args:
 
@@ -47,8 +48,9 @@ def process_session(session,
     pickle_filename = '%s_%s_%s.pickle' \
             % (session.node_id, session.anonymization_context, str(session.id))
     pickle_path = join(pickle_root, pickle_filename)
-    context = session_context_manager.load_context(pickle_path)
-    if context is None:
+    if not ignore_pickles:
+        context = session_context_manager.load_context(pickle_path)
+    if ignore_pickles or context is None:
         context = session_context_manager.create_context(
                 session.node_id, session.anonymization_context, session.id)
     processed_new_update = False
@@ -97,7 +99,8 @@ def process_sessions_real(coordinators,
                           index_filename,
                           pickle_root,
                           result_pickle_root,
-                          num_workers=None):
+                          num_workers,
+                          ignore_pickles):
     """ The main function for processing the updates """
     if num_workers != 0:
         pool = Pool(processes=num_workers)
@@ -130,7 +133,8 @@ def process_sessions_real(coordinators,
                              processors,
                              update_files,
                              updates_directory,
-                             num_workers != 0))
+                             num_workers != 0,
+                             ignore_pickles))
 
     print 'Processing sessions'
     global_context = GlobalContext()
@@ -158,7 +162,8 @@ def process_sessions(coordinators,
                      pickle_root,
                      temp_pickles_dir='/dev/shm',
                      num_workers=None,
-                     refresh_index=True):
+                     refresh_index=True,
+                     ignore_pickles=False):
     """
         Args:
         coordinators: list
@@ -182,6 +187,10 @@ def process_sessions(coordinators,
             when this is set to True then sqlite database which contains the
             indexing of tar file names to update file names, is refreshed.
             Recommended setting is True.
+        ignore_pickles: boolean
+            when this is True, then ignore all existing pickle files and recompute
+            everything from scratch. You need to do this whenever you change
+            a processor. Equivalently, you can manually delete the pickles.
     """
     if refresh_index:
         print 'Indexing new updates'
@@ -194,6 +203,7 @@ def process_sessions(coordinators,
                               index_filename,
                               pickle_root,
                               result_pickle_root,
-                              num_workers)
+                              num_workers,
+                              ignore_pickles)
     finally:
         rmtree(result_pickle_root)
