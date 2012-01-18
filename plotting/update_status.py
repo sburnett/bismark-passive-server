@@ -89,8 +89,8 @@ def main():
               ' /data/users/bismark/data/passive'
               ' /data/users/bismark/data/passive/index.sqlite'
               ' /data/users/sburnett/passive_pickles'
-              ' --db_filename=/data/users/sburnett/updates.sqlite')
-    conn = sqlite3.connect('/data/users/sburnett/updates.sqlite')
+              ' --db_filename=/data/users/sburnett/passive-databases/updates.sqlite')
+    conn = sqlite3.connect('/data/users/sburnett/passive-databases/updates.sqlite')
     print 'Plotting daily status'
     plot_updates(
             conn,
