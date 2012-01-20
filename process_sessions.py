@@ -53,6 +53,7 @@ def process_session(session,
     if ignore_pickles or context is None:
         context = session_context_manager.create_context(
                 session.node_id, session.anonymization_context, session.id)
+        session_context_manager.save_persistent_context(context, pickle_path)
     processed_new_update = False
     current_tarname = None
     while (context.last_sequence_number_processed + 1) in update_files:
