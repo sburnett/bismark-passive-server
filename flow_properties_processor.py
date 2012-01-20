@@ -7,7 +7,13 @@ class FlowPropertiesSessionProcessor(SessionProcessor):
         super(FlowPropertiesSessionProcessor, self).__init__()
 
     @abstractmethod
-    def process_packet(self, context, packet, port, device_names, domains):
+    def process_packet(self,
+                       context,
+                       packet,
+                       transport_protocol,
+                       port,
+                       device_names,
+                       domains):
         pass
 
     def process_update(self, context, update):
@@ -16,6 +22,11 @@ class FlowPropertiesSessionProcessor(SessionProcessor):
                 flow, flow_data = context.flows[packet.flow_id]
             except KeyError:
                 flow = flow_data = None
+
+            if flow is not None:
+                transport_protocol = flow.transport_protocol
+            else:
+                transport_protocol = -1
 
             if flow is not None \
                     and flow.source_ip in context.address_map \
@@ -43,4 +54,9 @@ class FlowPropertiesSessionProcessor(SessionProcessor):
             else:
                 domains = ['unknown']
 
-            self.process_packet(context, packet, port, device_names, domains)
+            self.process_packet(context,
+                                packet,
+                                transport_protocol,
+                                port,
+                                device_names,
+                                domains)

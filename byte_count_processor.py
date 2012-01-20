@@ -6,7 +6,7 @@ class ByteCountSessionProcessor(FlowPropertiesSessionProcessor):
     def __init__(self):
         super(ByteCountSessionProcessor, self).__init__()
     
-    def process_packet(self, context, packet, port, device_names, domains):
+    def process_packet(self, context, packet, transport_protocol, port, device_names, domains):
         rounded_timestamp = packet.timestamp.replace(second=0, microsecond=0)
 
         context.byte_count_oldest_timestamps[context.node_id] \

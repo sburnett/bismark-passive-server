@@ -6,7 +6,13 @@ class ByteStatisticsSessionProcessor(FlowPropertiesSessionProcessor):
     def __init__(self):
         super(ByteStatisticsSessionProcessor, self).__init__()
     
-    def process_packet(self, context, packet, port, device_names, domains):
+    def process_packet(self,
+                       context,
+                       packet,
+                       transport_protocol,
+                       port,
+                       device_names,
+                       domains):
         rounded_timestamp = packet.timestamp.replace(second=0, microsecond=0)
 
         context_key = context.node_id, context.anonymization_id
