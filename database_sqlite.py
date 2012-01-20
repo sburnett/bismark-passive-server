@@ -6,6 +6,7 @@ class BismarkPassiveSqliteDatabase(object):
         self._conn.row_factory = sqlite3.Row
 
         self._conn.execute('''PRAGMA journal_mode = MEMORY''')
+        self._conn.execute('''PRAGMA synchronous = OFF''')
 
     def import_byte_statistics(self, data, oldest_timestamps):
         self._conn.execute('''CREATE TABLE IF NOT EXISTS byte_statistics (
@@ -76,6 +77,35 @@ class BismarkPassiveSqliteDatabase(object):
         self._conn.executemany('''INSERT INTO packets_per_ip
                                   (node_id, anonymization_context, ip, count)
                                   VALUES (?, ?, ?, ?)''', args)
+        self._conn.commit()
+
+    def import_flow_statistics(self, flow_statistics):
+        self._conn.execute('''CREATE TABLE IF NOT EXISTS flow_statistics (
+                                node_id text NOT NULL,
+                                anonymization_context text NOT NULL,
+                                start_time text NOT NULL,
+                                end_time text NOT NULL,
+                                transport_protocol integer NOT NULL,
+                                port integer NOT NULL,
+                                domain text NOT NULL,
+                                mac_address text NOT NULL,
+                                bytes integer NOT NULL,
+                                packets integer NOT NULL
+                              )''')
+        self._conn.execute('''DELETE FROM flow_statistics''')
+        self._conn.executemany('''INSERT INTO flow_statistics
+                                  (node_id,
+                                   anonymization_context,
+                                   start_time,
+                                   end_time,
+                                   transport_protocol,
+                                   port,
+                                   domain,
+                                   mac_address,
+                                   bytes,
+                                   packets)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                               flow_statistics)
         self._conn.commit()
 
     def import_bytes_per_flow(self, bytes_per_flow):

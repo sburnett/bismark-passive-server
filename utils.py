@@ -58,3 +58,6 @@ def merge_disjoint_dicts(first, second):
     return second
 def return_negative_one():
     return -1
+def append_lists(first, second):
+    second.extend(first)
+    return second

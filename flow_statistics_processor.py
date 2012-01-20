@@ -6,7 +6,7 @@ class FlowStatisticsSessionProcessor(FlowPropertiesSessionProcessor):
     def __init__(self):
         super(FlowStatisticsSessionProcessor, self).__init__()
     
-    def process_packet(self, context, packet, port, device_names, domains):
+    def process_packet(self, context, packet, transport_protocol, port, device_names, domains):
         try:
             flow, flow_data = context.flows[packet.flow_id]
         except KeyError:
@@ -21,76 +21,42 @@ class FlowStatisticsSessionProcessor(FlowPropertiesSessionProcessor):
         if 'flow_started' not in flow_data:
             flow_data['flow_started'] = True
             if flow_key in context.auxiliary_per_flow:
-                port, domains, device_names \
+                transport_protocol, port, domains, device_names \
                         = context.auxiliary_per_flow[flow_key]
                 byte_count = context.bytes_per_flow_accumulator[flow_key]
                 packet_count = context.packets_per_flow_accumulator[flow_key]
-                second_count = context.seconds_per_flow_accumulator[flow_key]
-
-                context.bytes_per_flow[context.node_id, byte_count] += 1
-                context.packets_per_flow[context.node_id, packet_count] += 1
-                context.seconds_per_flow[context.node_id, second_count] += 1
-
-                context.bytes_per_port_per_flow[
-                        context.node_id, port, byte_count] += 1
-                context.packets_per_port_per_flow[
-                        context.node_id, port, packet_count] += 1
-                context.seconds_per_port_per_flow[
-                        context.node_id, port, second_count] += 1
+                start_time, end_time = context.seconds_per_flow_accumulator[flow_key]
 
                 for domain in domains:
-                    context.bytes_per_domain_per_flow[
-                            context.node_id, domain, byte_count] += 1
-                    context.packets_per_domain_per_flow[
-                            context.node_id, domain, packet_count] += 1
-                    context.seconds_per_domain_per_flow[
-                            context.node_id, domain, second_count] += 1
-                for device_name in device_names:
-                    context.bytes_per_device_per_flow[
-                            context.node_id, device_name, byte_count] += 1
-                    context.packets_per_device_per_flow[
-                            context.node_id, device_name, packet_count] += 1
-                    context.seconds_per_device_per_flow[
-                            context.node_id, device_name, second_count] += 1
+                    for device_name in device_names:
+                        context.flow_statistics.append(
+                                [context.node_id,
+                                 context.anonymization_id,
+                                 str(start_time),
+                                 str(end_time),
+                                 transport_protocol,
+                                 port,
+                                 domain,
+                                 device_name,
+                                 byte_count,
+                                 packet_count])
 
                 del context.auxiliary_per_flow[flow_key]
                 del context.bytes_per_flow_accumulator[flow_key]
                 del context.packets_per_flow_accumulator[flow_key]
                 del context.seconds_per_flow_accumulator[flow_key]
 
-        context.auxiliary_per_flow[flow_key] = (port, domains, device_names)
+        context.auxiliary_per_flow[flow_key] \
+                = (transport_protocol, port, domains, device_names)
         context.bytes_per_flow_accumulator[flow_key] += packet.size
         context.packets_per_flow_accumulator[flow_key] += 1
-        time_elapsed = packet.timestamp - flow_data['start_time']
         context.seconds_per_flow_accumulator[flow_key] \
-                = time_elapsed.seconds + time_elapsed.days * 86400
+                = (flow_data['start_time'], packet.timestamp)
 
 class FlowStatisticsProcessorCoordinator(SqliteProcessorCoordinator):
     persistent_state = dict(
-            bytes_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            packets_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            seconds_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_port_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            packets_per_port_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            seconds_per_port_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_domain_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            packets_per_domain_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            seconds_per_domain_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            bytes_per_device_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            packets_per_device_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
-            seconds_per_device_per_flow=\
-                    (utils.initialize_int_dict, utils.sum_dicts),
+            flow_statistics=\
+                    (list, utils.append_lists),
             )
     ephemeral_state = dict(
             auxiliary_per_flow=\
@@ -110,66 +76,30 @@ class FlowStatisticsProcessorCoordinator(SqliteProcessorCoordinator):
         return FlowStatisticsSessionProcessor()
     
     def finished_processing(self, global_context):
-        for flow_key, (port, domains, device_names) \
+        for flow_key, (transport_protocol, port, domains, device_names) \
                 in global_context.auxiliary_per_flow.iteritems():
-            node_id = flow_key[0]
+            (node_id, anonymization_id, _, _) = flow_key
 
-            byte_count \
-                    = global_context.bytes_per_flow_accumulator[flow_key]
-            packet_count \
-                    = global_context.packets_per_flow_accumulator[flow_key]
-            second_count \
-                    = global_context.seconds_per_flow_accumulator[flow_key]
-
-            global_context.bytes_per_flow[node_id, byte_count] += 1
-            global_context.packets_per_flow[node_id, packet_count] += 1
-            global_context.seconds_per_flow[node_id, second_count] += 1
-
-            global_context.bytes_per_port_per_flow[
-                    node_id, port, byte_count] += 1
-            global_context.packets_per_port_per_flow[
-                    node_id, port, packet_count] += 1
-            global_context.seconds_per_port_per_flow[
-                    node_id, port, second_count] += 1
+            byte_count = global_context.bytes_per_flow_accumulator[flow_key]
+            packet_count = global_context.packets_per_flow_accumulator[flow_key]
+            start_time, end_time = global_context.seconds_per_flow_accumulator[flow_key]
 
             for domain in domains:
-                global_context.bytes_per_domain_per_flow[
-                        node_id, domain, byte_count] += 1
-                global_context.packets_per_domain_per_flow[
-                            node_id, domain, packet_count] += 1
-                global_context.seconds_per_domain_per_flow[
-                            node_id, domain, second_count] += 1
-
-            for device_name in device_names:
-                global_context.bytes_per_device_per_flow[
-                        node_id, device_name, byte_count] += 1
-                global_context.packets_per_device_per_flow[
-                        node_id, device_name, packet_count] += 1
-                global_context.seconds_per_device_per_flow[
-                        node_id, device_name, second_count] += 1
+                for device_name in device_names:
+                    global_context.flow_statistics.append(
+                            [node_id,
+                             anonymization_id,
+                             str(start_time),
+                             str(end_time),
+                             transport_protocol,
+                             port,
+                             domain,
+                             device_name,
+                             byte_count,
+                             packet_count])
 
         super(FlowStatisticsProcessorCoordinator, self).finished_processing(
                 global_context)
 
     def write_to_database(self, database, global_context):
-        database.import_bytes_per_flow(global_context.bytes_per_flow)
-        database.import_packets_per_flow(global_context.packets_per_flow)
-        database.import_seconds_per_flow(global_context.seconds_per_flow)
-        database.import_bytes_per_port_per_flow(
-                global_context.bytes_per_port_per_flow)
-        database.import_packets_per_port_per_flow(
-                global_context.packets_per_port_per_flow)
-        database.import_seconds_per_port_per_flow(
-                global_context.seconds_per_port_per_flow)
-        database.import_bytes_per_domain_per_flow(
-                global_context.bytes_per_domain_per_flow)
-        database.import_packets_per_domain_per_flow(
-                global_context.packets_per_domain_per_flow)
-        database.import_seconds_per_domain_per_flow(
-                global_context.seconds_per_domain_per_flow)
-        database.import_bytes_per_device_per_flow(
-                global_context.bytes_per_device_per_flow)
-        database.import_packets_per_device_per_flow(
-                global_context.packets_per_device_per_flow)
-        database.import_seconds_per_device_per_flow(
-                global_context.seconds_per_device_per_flow)
+        database.import_flow_statistics(global_context.flow_statistics)
