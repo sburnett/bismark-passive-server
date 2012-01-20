@@ -7,49 +7,62 @@ from os.path import join
 
 from process_sessions import process_sessions
 
-from byte_count_processor import ByteCountProcessorCoordinator
+try:
+    from byte_count_processor import ByteCountProcessorCoordinator
+except ImportError:
+    print 'byte_count_processor disabled'
 from byte_statistics_processor import ByteStatisticsProcessorCoordinator
 from correlation_processor import CorrelationProcessorCoordinator
 from domains_per_flow_processor import DomainsPerFlowProcessorCoordinator
+try:
+    from domain_processor import DomainProcessorCoordinator
+except ImportError:
+    print 'domain_processor disabled'
 from flow_statistics_processor import FlowStatisticsProcessorCoordinator
 from ip_counts_processor import IpCountsProcessorCoordinator
-from packet_size_processor import PacketSizeProcessorCoordinator
+try:
+    from packet_size_processor import PacketSizeProcessorCoordinator
+except ImportError:
+    print 'packet_size_processor disabled'
 from update_statistics_processor import UpdateStatisticsProcessorCoordinator
-from domain_processor import DomainProcessorCoordinator
 
 # Add new processing harnesses here. Keep the names in alphabetical order.
 # Coordinators are called in the given order once per update file.
-harnesses = {
-        'byte_statistics': [CorrelationProcessorCoordinator,
-                            DomainsPerFlowProcessorCoordinator,
-                            ByteStatisticsProcessorCoordinator],
-        'dashboard': [CorrelationProcessorCoordinator,
-                      DomainsPerFlowProcessorCoordinator,
-                      ByteCountProcessorCoordinator],
-        'flow_statistics': [CorrelationProcessorCoordinator,
-                            DomainsPerFlowProcessorCoordinator,
-                            FlowStatisticsProcessorCoordinator],
-        'ip_counts': [CorrelationProcessorCoordinator,
-                      IpCountsProcessorCoordinator],
-        'packet_size': [CorrelationProcessorCoordinator,
-                        PacketSizeProcessorCoordinator],
-        'updates': [UpdateStatisticsProcessorCoordinator],
-        'domains_accessed': [CorrelationProcessorCoordinator,
-                        DomainProcessorCoordinator],
-        }
+def harnesses(name):
+    if name == 'byte_statistics':
+        return [CorrelationProcessorCoordinator,
+                DomainsPerFlowProcessorCoordinator,
+                ByteStatisticsProcessorCoordinator]
+    elif name == 'dashboard':
+        return [CorrelationProcessorCoordinator,
+                DomainsPerFlowProcessorCoordinator,
+                ByteCountProcessorCoordinator]
+    elif name == 'domains_accessed':
+        return [CorrelationProcessorCoordinator,
+                DomainProcessorCoordinator]
+    elif name == 'flow_statistics':
+        return [CorrelationProcessorCoordinator,
+                DomainsPerFlowProcessorCoordinator,
+                FlowStatisticsProcessorCoordinator]
+    elif name == 'ip_counts':
+        return [CorrelationProcessorCoordinator,
+                IpCountsProcessorCoordinator]
+    elif name == 'packet_size':
+        return [CorrelationProcessorCoordinator,
+                PacketSizeProcessorCoordinator]
+    elif name == 'updates':
+        return [UpdateStatisticsProcessorCoordinator]
 
 def parse_coordinator_args(parser):
     """Add arguments for your custom coordinator here. Keep arguments in
     alphabetical order. Don't use short options in this function."""
     parser.add_option('--db_filename', action='store', dest='db_filename',
                       help='Sqlite database filename')
+    parser.add_option('--db_host', action='store', dest='db_host',
+                      default='localhost', help='Database hostname')
     parser.add_option('--db_name', action='store', dest='db_name',
                       default='bismark_openwrt_live_v0_1',
                       help='Database name')
-    parser.add_option('--db_user', action='store', dest='db_user',
-                      default='sburnett', help='Database username')
-    parser.add_option('--db_host', action='store', dest='db_host',
-                      default='localhost', help='Database hostname')
     parser.add_option('--db_password', action='store', dest='db_password',
                       default='', help='Database password')
     parser.add_option('--db_port', action='store', dest='db_port',
@@ -57,6 +70,8 @@ def parse_coordinator_args(parser):
     parser.add_option('--db_rebuild', action='store_true',
                       dest='db_rebuild', default=False,
                       help='Rebuild database from scratch (advanced)')
+    parser.add_option('--db_user', action='store', dest='db_user',
+                      default='sburnett', help='Database username')
 
 def parse_args():
     """Don't add coordinator-specific options to this funciton."""
@@ -93,7 +108,7 @@ def main():
     except OSError, e:
         if e.errno != errno.EEXIST:
             raise
-    coordinators = map(lambda cl: cl(options), harnesses[args['harness']])
+    coordinators = map(lambda cl: cl(options), harnesses(args['harness']))
     process_sessions(coordinators,
                      args['updates_directory'],
                      args['index_filename'],
