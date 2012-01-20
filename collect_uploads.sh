@@ -31,3 +31,5 @@ for node_dir in $UPLOADS_DIR/*; do
         fi
     fi
 done
+
+SSH_AUTH_SOCK= rsync -az -e "ssh -i /data/users/sburnett/.ssh/id_rsa_backups" $UPDATES_DIR/ dp5.gtnoise.net:
