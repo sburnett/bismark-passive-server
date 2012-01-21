@@ -29,7 +29,7 @@ class BismarkPassiveSqliteDatabase(object):
                                   AND eventstamp >= ?''',
                                imap(merge_pair, oldest_timestamps.iteritems()))
         def new_enough_to_insert((key, _)):
-            assert len(key) == 8
+            assert len(key) == 7
             return key[2] >= oldest_timestamps[key[0], key[1]]
         self._conn.executemany('''INSERT OR REPLACE INTO byte_statistics
                                   (node_id,
