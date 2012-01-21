@@ -25,6 +25,7 @@ class ByteStatisticsSessionProcessor(FlowPropertiesSessionProcessor):
                                         context.anonymization_id,
                                         rounded_timestamp,
                                         device_name,
+                                        transport_protocol,
                                         port,
                                         domain] += packet.size
 

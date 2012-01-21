@@ -1,4 +1,8 @@
+from itertools import chain, ifilter, imap
 import sqlite3
+
+def merge_pair((key, value)):
+    return key + (value,)
 
 class BismarkPassiveSqliteDatabase(object):
     def __init__(self, filename):
@@ -14,35 +18,71 @@ class BismarkPassiveSqliteDatabase(object):
                                   anonymization_context text NOT NULL,
                                   eventstamp text NOT NULL,
                                   mac_address text NOT NULL,
+                                  transport_protocol integer NOT NULL,
                                   port integer NOT NULL,
                                   domain text NOT NULL,
-                                  bytes_transferred integer NOT NULL,
-                                  UNIQUE (node_id, anonymization_context, eventstamp, mac_address, port, domain)
+                                  bytes_transferred integer NOT NULL
                               )''')
-        args = []
-        for (node_id,
-             anonymization_context,
-             eventstamp,
-             mac_address,
-             port,
-             domain), bytes_transferred in data.iteritems():
-            if eventstamp >= oldest_timestamps[node_id, anonymization_context]:
-                args.append((node_id,
-                             anonymization_context,
-                             eventstamp,
-                             mac_address,
-                             port,
-                             domain,
-                             bytes_transferred))
+        self._conn.executemany('''DELETE FROM byte_statistics
+                                  WHERE node_id = ?
+                                  AND anonymization_context = ?
+                                  AND eventstamp >= ?''',
+                               imap(merge_pair, oldest_timestamps.iteritems()))
+        def new_enough_to_insert((key, _)):
+            assert len(key) == 8
+            return key[2] >= oldest_timestamps[key[0], key[1]]
         self._conn.executemany('''INSERT OR REPLACE INTO byte_statistics
                                   (node_id,
                                    anonymization_context,
                                    eventstamp,
-                                   mac_address, 
+                                   mac_address,
+                                   transport_protocol,
                                    port,
                                    domain,
                                    bytes_transferred)
-                                  VALUES (?, ?, ?, ?, ?, ?, ?)''', args)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+                               imap(merge_pair,
+                                    ifilter(new_enough_to_insert,
+                                            data.iteritems())))
+        self._conn.commit()
+
+    def import_update_statistics(self, update_statistics, oldest_timestamps):
+        self._conn.execute('''CREATE TABLE IF NOT EXISTS update_statistics (
+                                  node_id text NOT NULL,
+                                  eventstamp integer NOT NULL,
+                                  file_format_version integer NOT NULL,
+                                  pcap_dropped integer NOT NULL,
+                                  iface_dropped integer NOT NULL,
+                                  packet_series_dropped integer NOT NULL,
+                                  flow_table_dropped integer NOT NULL,
+                                  dropped_a_records integer NOT NULL,
+                                  dropped_cname_records integer NOT NULL,
+                                  packet_series_size integer NOT NULL,
+                                  flow_table_size integer NOT NULL,
+                                  a_records_size integer NOT NULL,
+                                  cname_records_size integer NOT NULL
+                              )''')
+        self._conn.executemany('''DELETE FROM update_statistics
+                                  WHERE node_id = ?
+                                  AND eventstamp >= ?''',
+                               oldest_timestamps.iteritems())
+        self._conn.executemany('''INSERT INTO update_statistics
+                                  (node_id,
+                                   eventstamp,
+                                   file_format_version,
+                                   pcap_dropped,
+                                   iface_dropped,
+                                   packet_series_dropped,
+                                   flow_table_dropped,
+                                   dropped_a_records,
+                                   dropped_cname_records,
+                                   packet_series_size,
+                                   flow_table_size,
+                                   a_records_size,
+                                   cname_records_size)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                              ifilter(lambda r: r[1] >= oldest_timestamps[r[0]],
+                                      chain(*update_statistics)))
         self._conn.commit()
 
     def import_bytes_per_ip(self, bytes_per_ip):
@@ -317,53 +357,3 @@ class BismarkPassiveSqliteDatabase(object):
                                   VALUES (?, ?, ?, ?)''', args)
         self._conn.commit()
 
-    def import_update_statistics(self, update_statistics, oldest_timestamps):
-        self._conn.execute('''CREATE TABLE IF NOT EXISTS update_statistics (
-                                  node_id text NOT NULL,
-                                  eventstamp integer NOT NULL,
-                                  file_format_version integer NOT NULL,
-                                  pcap_dropped integer NOT NULL,
-                                  iface_dropped integer NOT NULL,
-                                  packet_series_dropped integer NOT NULL,
-                                  flow_table_dropped integer NOT NULL,
-                                  dropped_a_records integer NOT NULL,
-                                  dropped_cname_records integer NOT NULL,
-                                  packet_series_size integer NOT NULL,
-                                  flow_table_size integer NOT NULL,
-                                  a_records_size integer NOT NULL,
-                                  cname_records_size integer NOT NULL,
-                                  UNIQUE (node_id, eventstamp)
-                              )''')
-        args = []
-        for (node_id, eventstamp), statistics in update_statistics.iteritems():
-            if eventstamp >= oldest_timestamps[node_id]:
-                args.append(
-                        (node_id, eventstamp,
-                            statistics.file_format_version,
-                            statistics.pcap_dropped,
-                            statistics.iface_dropped,
-                            statistics.packet_series_dropped,
-                            statistics.flow_table_dropped,
-                            statistics.dropped_a_records,
-                            statistics.dropped_cname_records,
-                            statistics.packet_series_size,
-                            statistics.flow_table_size,
-                            statistics.a_records_size,
-                            statistics.cname_records_size))
-        self._conn.executemany('''INSERT OR REPLACE INTO update_statistics
-                                  (node_id,
-                                   eventstamp,
-                                   file_format_version,
-                                   pcap_dropped,
-                                   iface_dropped,
-                                   packet_series_dropped,
-                                   flow_table_dropped,
-                                   dropped_a_records,
-                                   dropped_cname_records,
-                                   packet_series_size,
-                                   flow_table_size,
-                                   a_records_size,
-                                   cname_records_size)
-                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                              args)
-        self._conn.commit()

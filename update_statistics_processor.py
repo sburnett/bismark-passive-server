@@ -5,7 +5,9 @@ from session_processor import SessionProcessor
 import utils
 
 UpdateStatistics = namedtuple('UpdateStatistics',
-                              ['file_format_version',
+                              ['node_id',
+                               'eventstamp',
+                               'file_format_version',
                                'pcap_dropped',
                                'iface_dropped',
                                'packet_series_dropped',
@@ -22,8 +24,9 @@ class UpdateStatisticsSessionProcessor(SessionProcessor):
         super(UpdateStatisticsSessionProcessor, self).__init__()
 
     def process_update(self, context, update):
-        context.update_statistics[context.node_id, update.timestamp] \
-                = UpdateStatistics(
+        context.update_statistics.append(UpdateStatistics(
+                        node_id=context.node_id,
+                        eventstamp=update.timestamp,
                         file_format_version=update.file_format_version,
                         pcap_dropped=update.pcap_dropped,
                         iface_dropped=update.iface_dropped,
@@ -34,13 +37,17 @@ class UpdateStatisticsSessionProcessor(SessionProcessor):
                         packet_series_size=len(update.packet_series),
                         flow_table_size=update.flow_table_size,
                         a_records_size=len(update.a_records),
-                        cname_records_size=len(update.cname_records))
+                        cname_records_size=len(update.cname_records)))
         context.update_statistics_oldest_timestamps[context.node_id] \
                 = min(context.update_statistics_oldest_timestamps[context.node_id],
                       update.timestamp)
 
+def add_iter(first, second):
+    second.append(iter(first))
+    return second
+
 class UpdateStatisticsProcessorCoordinator(SqliteProcessorCoordinator):
-    persistent_state = dict(update_statistics=(dict, utils.update_dict))
+    persistent_state = dict(update_statistics=(list, add_iter))
 
     def __init__(self, options):
         super(UpdateStatisticsProcessorCoordinator, self).__init__(options)
