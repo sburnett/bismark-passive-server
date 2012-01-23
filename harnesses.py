@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import errno
+from errno import EEXIST
 from optparse import OptionParser
 from os import makedirs
 from os.path import join
@@ -72,11 +72,14 @@ def parse_coordinator_args(parser):
                       help='Rebuild database from scratch (advanced)')
     parser.add_option('--db_user', action='store', dest='db_user',
                       default='sburnett', help='Database username')
+    parser.add_option('--plots_directory', action='store',
+                      dest='plots_directory', default='/tmp',
+                      help='Store plots in this directory')
 
 def parse_args():
     """Don't add coordinator-specific options to this funciton."""
     usage = 'usage: %prog [options]' \
-            ' harness updates_directory index_filename pickles_directory'
+            ' harness index_filename pickles_directory'
     parser = OptionParser(usage=usage)
     parser.add_option('-t', '--temp-pickles-dir', action='store',
                       dest='temp_pickles_dir', default='/dev/shm',
@@ -87,17 +90,13 @@ def parse_args():
     parser.add_option('-p', '--ignore-pickles', action='store_true',
                       dest='ignore_pickles', default=False,
                       help='Compute from scratch (use when processors change)')
-    parser.add_option('-n', '--disable-refresh', action='store_true',
-                      dest='disable_refresh', default=False,
-                      help='Disable refresh of index before processing')
     parse_coordinator_args(parser)
     options, args = parser.parse_args()
-    if len(args) != 4:
+    if len(args) != 3:
         parser.error('Missing required option')
     mandatory = { 'harness': args[0],
-                  'updates_directory': args[1],
-                  'index_filename': args[2],
-                  'pickles_directory': args[3] }
+                  'index_filename': args[1],
+                  'pickles_directory': args[2] }
     return options, mandatory
 
 def main():
@@ -106,16 +105,14 @@ def main():
     try:
         makedirs(pickles_path)
     except OSError, e:
-        if e.errno != errno.EEXIST:
+        if e.errno != EEXIST:
             raise
     coordinators = map(lambda cl: cl(options), harnesses(args['harness']))
     process_sessions(coordinators,
-                     args['updates_directory'],
                      args['index_filename'],
                      pickles_path,
                      options.temp_pickles_dir,
                      options.workers,
-                     not options.disable_refresh,
                      options.ignore_pickles)
 
 if __name__ == '__main__':
