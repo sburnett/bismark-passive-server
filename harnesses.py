@@ -53,7 +53,7 @@ def harnesses(name):
         return [CorrelationProcessorCoordinator,
                 PacketSizeProcessorCoordinator]
     elif name == 'updates':
-        return [UpdateStatisticsProcessorCoordinator]
+        return [PlotUpdateStatisticsProcessorCoordinator]
 
 def parse_coordinator_args(parser):
     """Add arguments for your custom coordinator here. Keep arguments in
