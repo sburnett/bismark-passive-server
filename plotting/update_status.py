@@ -95,11 +95,10 @@ def main():
     os.system('nice -n 5'
               ' python /home/sburnett/git/bismark-passive-server/harnesses.py'
               ' updates'
-              ' /data/users/bismark/data/passive'
-              ' /data/users/bismark/data/passive/index.sqlite'
-              ' /data/users/sburnett/passive_pickles'
-              ' --db_filename=/data/users/sburnett/passive-databases/updates.sqlite')
-    conn = sqlite3.connect('/data/users/sburnett/passive-databases/updates.sqlite')
+              ' /data/users/sburnett/index.sqlite'
+              ' /data/users/sburnett/passive-pickles'
+              ' --db_filename=/data/users/sburnett/passive-sqlite/updates.sqlite')
+    conn = sqlite3.connect('/data/users/sburnett/passive-sqlite/updates.sqlite')
     print 'Plotting daily status'
     plot_updates(
             conn,
