@@ -29,7 +29,9 @@ from update_statistics_processor import PlotUpdateStatisticsProcessorCoordinator
 # Add new processing harnesses here. Keep the names in alphabetical order.
 # Coordinators are called in the given order once per update file.
 def harnesses(name):
-    if name == 'byte_statistics':
+    if name == 'benchmark':
+        return [CorrelationProcessorCoordinator]
+    elif name == 'byte_statistics':
         return [CorrelationProcessorCoordinator,
                 DomainsPerFlowProcessorCoordinator,
                 ByteStatisticsProcessorCoordinator]
