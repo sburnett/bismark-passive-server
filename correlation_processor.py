@@ -18,14 +18,19 @@
 
 import re
 
-from session_processor import ProcessorCoordinator, SessionProcessor
+from session_processor import PersistentSessionProcessor
 import utils
 
-class CorrelationSessionProcessor(SessionProcessor):
-    def __init__(self):
-        super(CorrelationSessionProcessor, self).__init__()
+class CorrelationSessionProcessor(PersistentSessionProcessor):
+    def initialize_persistent_context(self, context):
+        context.whitelist = set()
+        context.address_map = dict()
+        context.mac_address_map = dict()
+        context.flows = dict()
+        context.dns_ip_map = defaultdict(set)
+        context.dns_a_map_domain = defaultdict(list)
 
-    def process_update(self, context, update):
+    def process_update_persistent(self, context, update):
         for domain in update.whitelist:
             context.whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))
 
@@ -97,20 +102,3 @@ class CorrelationSessionProcessor(SessionProcessor):
              mappings.difference_update(filter(
                  lambda (domain, start, end): end < timestamp,
                  mappings))
-
-class CorrelationProcessorCoordinator(ProcessorCoordinator):
-    persistent_state = dict(
-            whitelist=(set, None),
-            address_map=(dict, None),
-            mac_address_map=(dict, None),
-            flows=(dict, None),
-            dns_ip_map=(utils.initialize_set_dict, None),
-            dns_a_map_domain=(utils.initialize_list_dict, None),
-            )
-    ephemeral_state = dict()
-
-    def __init__(self, options):
-        super(CorrelationProcessorCoordinator, self).__init__(options)
-
-    def create_processor(self, session):
-        return CorrelationSessionProcessor()

@@ -20,7 +20,6 @@ class SessionProcessor(object):
     def initialize_global_context(self, global_context):
         pass
 
-    @abstractmethod
     def merge_contexts(self, persistent_context, ephemeral_context, global_context):
         pass
 
@@ -35,7 +34,6 @@ class PersistentSessionProcessor(SessionProcessor):
     def merge_contexts(self, persistent_context, ephemeral_context, global_context):
         self.merge_contexts_persistent(persistent_context, global_context)
 
-    @abstractmethod
     def merge_contexts_persistent(self, persistent_context, global_context):
         pass
 
@@ -50,6 +48,5 @@ class EphemeralSessionProcessor(SessionProcessor):
     def merge_contexts(self, persistent_context, ephemeral_context, global_context):
         self.merge_contexts_ephemeral(ephemeral_context, global_context)
 
-    @abstractmethod
     def merge_contexts_ephemeral(self, ephemeral_context, global_context):
         pass
