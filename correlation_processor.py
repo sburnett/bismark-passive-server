@@ -19,7 +19,6 @@
 import re
 
 from session_processor import PersistentSessionProcessor
-import utils
 
 class CorrelationSessionProcessor(PersistentSessionProcessor):
     def initialize_persistent_context(self, context):
