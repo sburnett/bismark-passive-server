@@ -10,21 +10,21 @@ from process_sessions import process_sessions
 try:
     from byte_count_processor import ByteCountProcessorCoordinator
 except ImportError:
-    print 'byte_count_processor disabled'
+    pass
 from byte_statistics_processor import ByteStatisticsProcessorCoordinator
 from correlation_processor import CorrelationProcessorCoordinator
 from domains_per_flow_processor import DomainsPerFlowProcessorCoordinator
 try:
     from domain_processor import DomainProcessorCoordinator
 except ImportError:
-    print 'domain_processor disabled'
+    pass
 from flow_statistics_processor import FlowStatisticsProcessorCoordinator
 from ip_counts_processor import IpCountsProcessorCoordinator
 try:
     from packet_size_processor import PacketSizeProcessorCoordinator
 except ImportError:
-    print 'packet_size_processor disabled'
-from update_statistics_processor import UpdateStatisticsProcessorCoordinator
+    pass
+from update_statistics_processor import PlotUpdateStatisticsProcessorCoordinator
 
 # Add new processing harnesses here. Keep the names in alphabetical order.
 # Coordinators are called in the given order once per update file.
