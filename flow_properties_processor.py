@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 from session_processor import SessionProcessor
 
-class FlowPropertiesSessionProcessor(SessionProcessor):
+class FlowPropertiesSessionProcessor(PersistentSessionProcessor):
     def __init__(self):
         super(FlowPropertiesSessionProcessor, self).__init__()
 
