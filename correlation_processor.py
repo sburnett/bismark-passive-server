@@ -16,16 +16,24 @@
                 the set of valid DNS mappings for a device.
 """
 
+from collections import defaultdict
 import re
 
 from session_processor import PersistentSessionProcessor
 
+class FlowCorrelationSessionProcessor(PersistentSessionProcessor):
+    def initialize_context(self, context):
+        context.flows = dict()
+
+    def process_update_persistent(self, context, update):
+        for flow in update.flow_table:
+            context.flows[flow.flow_id] = flow
+
 class CorrelationSessionProcessor(PersistentSessionProcessor):
-    def initialize_persistent_context(self, context):
+    def initialize_context(self, context):
         context.whitelist = set()
         context.address_map = dict()
         context.mac_address_map = dict()
-        context.flows = dict()
         context.dns_ip_map = defaultdict(set)
         context.dns_a_map_domain = defaultdict(list)
 
@@ -49,9 +57,6 @@ class CorrelationSessionProcessor(PersistentSessionProcessor):
             self.process_cname_record(
                     context, cname_record, update.packet_series)
         self.cleanup_dns_ip_map(context, update.timestamp)
-
-        for flow in update.flow_table:
-            context.flows[flow.flow_id] = flow, {}
 
     def process_a_record(self, context, a_record, a_packet):
         domain_key = (a_record.address_id, a_record.anonymized, a_record.domain)
