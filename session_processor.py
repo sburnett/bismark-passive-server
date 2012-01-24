@@ -24,6 +24,12 @@ class SessionProcessor(object):
         pass
 
 class PersistentSessionProcessor(SessionProcessor):
+    def initialize_persistent_context(self, persistent_context):
+        self.initialize_context(persistent_context)
+
+    def initialize_context(self, context):
+        pass
+
     def process_update(self, persistent_context, ephemeral_context, update):
         self.process_update_persistent(persistent_context, update)
 
@@ -38,6 +44,12 @@ class PersistentSessionProcessor(SessionProcessor):
         pass
 
 class EphemeralSessionProcessor(SessionProcessor):
+    def initialize_ephemeral_context(self, ephemeral_context):
+        self.initialize_context(ephemeral_context)
+
+    def initialize_context(self, context):
+        pass
+
     def process_update(self, persistent_context, ephemeral_context, update):
         self.process_update_ephemeral(ephemeral_context, update)
 
