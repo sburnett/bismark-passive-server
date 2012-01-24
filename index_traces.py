@@ -51,18 +51,22 @@ def index_traces(updates_directory, index_filename):
                                   iglob(join(updates_directory, '*.tar')))
     number_to_verify = len(tarnames_unprocessed)
     print 'Verifying %d tarfile checksums' % number_to_verify
+    if number_to_verify == 0:
+        return
     if progressbar is not None:
         vprogress = progressbar.ProgressBar(
                 maxval=number_to_verify,
                 widgets=[progressbar.SimpleProgress(),
                          progressbar.Bar(),
                          progressbar.Timer()])
-        tarnames = filter(verify_checksum, vprogress(tarnames_unprocessed))
     else:
-        tarnames = filter(verify_checksum, tarnames_unprocessed)
+        vprogress = lambda x: x
+    tarnames = filter(verify_checksum, vprogress(tarnames_unprocessed))
 
     number_of_tarfiles = len(tarnames)
     print 'Found %d new tar files' % number_of_tarfiles
+    if number_of_tarfiles == 0:
+        return
     reindex = number_of_tarfiles > 1000
     if progressbar is not None:
         progress = progressbar.ProgressBar(
@@ -70,13 +74,11 @@ def index_traces(updates_directory, index_filename):
                 widgets=[progressbar.SimpleProgress(),
                          progressbar.Bar(),
                          progressbar.Timer()])
-        index.index(imap(basename, tarnames),
-                    chain.from_iterable(imap(process_tarfile, progress(tarnames))),
-                    reindex)
     else:
-        index.index(imap(basename, tarnames),
-                    chain.from_iterable(imap(process_tarfile, tarnames)),
-                    reindex)
+        progress = lambda x: x
+    index.index(imap(basename, tarnames),
+                chain.from_iterable(imap(process_tarfile, progress(tarnames))),
+                reindex)
 
 def main():
     usage = 'usage: %prog [options] updates_directory index_filename'

@@ -183,23 +183,20 @@ def process_sessions(harness,
                 widgets=[progressbar.SimpleProgress(),
                          progressbar.Bar(),
                          progressbar.Timer()])
-        progress.start()
+    else:
+        progress = lambda x: x
     global_context = GlobalContext()
     for processor in processors:
         processor.initialize_global_context(global_context)
     if num_workers == 0:
         results = imap(process_session, process_args)
-        for idx, (persistent_context, ephemeral_context) in enumerate(results):
-            if progressbar is not None:
-                progress.update(idx)
+        for persistent_context, ephemeral_context in progress(results):
             for processor in processors:
                 processor.merge_contexts(
                         persistent_context, ephemeral_context, global_context)
     else:
         results = pool.imap_unordered(process_session, process_args)
-        for idx, (persistent_pickle_path, ephemeral_pickle_path) in enumerate(results):
-            if progressbar is not None:
-                progress.update(idx)
+        for persistent_pickle_path, ephemeral_pickle_path in progress(results):
             if persistent_pickle_path == ephemeral_pickle_path:
                 persistent_context, ephemeral_context = \
                         pickle.load(open(persistent_pickle_path, 'rb'))
@@ -213,8 +210,6 @@ def process_sessions(harness,
                         persistent_context, ephemeral_context, global_context)
         pool.close()
         pool.join()
-    if progressbar is not None:
-        progress.finish()
     processor.complete_global_context(global_context)
 
     print 'Post-processing'
