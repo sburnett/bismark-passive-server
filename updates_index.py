@@ -2,9 +2,9 @@ from collections import namedtuple
 from itertools import imap
 from os.path import basename
 try:
-    from cPickle import dumps, loads
+    from cPickle import dumps, loads, HIGHEST_PROTOCOL
 except ImportError:
-    from pickle import dumps, loads
+    from pickle import dumps, loads, HIGHEST_PROTOCOL
 import sqlite3
 from zlib import compress, decompress
 
@@ -36,7 +36,8 @@ class UpdatesIndexer(UpdatesIndex):
                                anonymization_context text,
                                session_id integer,
                                sequence_number integer,
-                               pickle blob)''')
+                               pickle blob,
+                               size integer)''')
         self._conn.commit()
 
     @property
@@ -46,11 +47,13 @@ class UpdatesIndexer(UpdatesIndex):
 
     @staticmethod
     def map_update(update):
+        data = buffer(compress(dumps(update, HIGHEST_PROTOCOL)))
         return (update.bismark_id,
                 update.anonymization_signature,
                 update.creation_time,
                 update.sequence_number,
-                buffer(compress(dumps(update, 2))))
+                data,
+                len(data))
 
     @staticmethod
     def map_session(update):
@@ -58,25 +61,31 @@ class UpdatesIndexer(UpdatesIndex):
                 update.anonymization_signature,
                 update.creation_time)
 
-    def index(self, tarnames, updates):
-        self._conn.execute('DROP INDEX IF EXISTS updates_index')
+    def index(self, tarnames, updates, reindex=False):
+        if reindex:
+            self._conn.execute('DROP INDEX IF EXISTS updates_index')
         self._conn.executemany(
                 'INSERT OR IGNORE INTO tarnames (tarname) VALUES (?)',
                 imap(lambda n: (basename(n),), tarnames))
+        print 'Inserting new updates'
         self._conn.executemany(
                 '''INSERT INTO updates
                    (node_id,
                     anonymization_context,
                     session_id,
                     sequence_number,
-                    pickle)
-                   VALUES (?, ?, ?, ?, ?)''',
+                    pickle,
+                    size)
+                   VALUES (?, ?, ?, ?, ?, ?)''',
                 imap(UpdatesIndexer.map_update, updates))
-        self._conn.execute('''CREATE INDEX updates_index ON updates
+        print 'Building index'
+        self._conn.execute('''CREATE INDEX IF NOT EXISTS
+                              updates_index ON updates
                               (node_id,
                                anonymization_context,
                                session_id,
                                sequence_number)''')
+        print 'Computing sessions'
         self._conn.execute('DELETE FROM sessions')
         self._conn.execute(
                 '''INSERT INTO sessions
@@ -84,7 +93,7 @@ class UpdatesIndexer(UpdatesIndex):
                    SELECT node_id,
                           anonymization_context,
                           session_id,
-                          sum(length(pickle))
+                          sum(size)
                    FROM updates
                    GROUP BY node_id, anonymization_context, session_id''')
         self._conn.commit()

@@ -6,6 +6,12 @@ from hashlib import md5
 from itertools import chain, ifilter, imap
 from optparse import OptionParser
 from os.path import basename, join, splitext
+try:
+    import progressbar
+except ImportError:
+    print "Install the 'progressbar' package if " \
+            "you're curious how long this will take"
+    progressbar = None
 import tarfile
 
 from update_parser import PassiveUpdate
@@ -40,12 +46,37 @@ def process_tarfile(tarname):
 
 def index_traces(updates_directory, index_filename):
     index = UpdatesIndexer(index_filename)
-    tarnames_processed = index.tarnames
-    tarnames = filter(verify_checksum,
-                      ifilter(lambda f: basename(f) not in tarnames_processed,
-                              iglob(join(updates_directory, '*.tar'))))
-    index.index(imap(basename, tarnames),
-                chain.from_iterable(imap(process_tarfile, tarnames)))
+    tarnames_processed = set(index.tarnames)
+    tarnames_unprocessed = filter(lambda f: basename(f) not in tarnames_processed,
+                                  iglob(join(updates_directory, '*.tar')))
+    number_to_verify = len(tarnames_unprocessed)
+    print 'Verifying %d tarfile checksums' % number_to_verify
+    if progressbar is not None:
+        vprogress = progressbar.ProgressBar(
+                maxval=number_to_verify,
+                widgets=[progressbar.SimpleProgress(),
+                         progressbar.Bar(),
+                         progressbar.Timer()])
+        tarnames = filter(verify_checksum, vprogress(tarnames_unprocessed))
+    else:
+        tarnames = filter(verify_checksum, tarnames_unprocessed)
+
+    number_of_tarfiles = len(tarnames)
+    print 'Found %d new tar files' % number_of_tarfiles
+    reindex = number_of_tarfiles > 1000
+    if progressbar is not None:
+        progress = progressbar.ProgressBar(
+                maxval=number_of_tarfiles,
+                widgets=[progressbar.SimpleProgress(),
+                         progressbar.Bar(),
+                         progressbar.Timer()])
+        index.index(imap(basename, tarnames),
+                    chain.from_iterable(imap(process_tarfile, progress(tarnames))),
+                    reindex)
+    else:
+        index.index(imap(basename, tarnames),
+                    chain.from_iterable(imap(process_tarfile, tarnames)),
+                    reindex)
 
 def main():
     usage = 'usage: %prog [options] updates_directory index_filename'
