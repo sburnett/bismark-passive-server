@@ -29,23 +29,28 @@ class FlowCorrelationSessionProcessor(PersistentSessionProcessor):
         for flow in update.flow_table:
             context.flows[flow.flow_id] = flow
 
+class MacAddressCorrelationSessionProcessor(PersistentSessionProcessor):
+    def initialize_context(self, context):
+        context.ip_to_mac_address_map = dict()
+        context.ip_to_mac_address_index_map = dict()
+
+    def process_update_persistent(self, context, update):
+        for offset, address in enumerate(update.addresses):
+            index = (update.address_table_first_id + offset) \
+                    % update.address_table_size
+            context.ip_to_mac_address_index_map[address.ip_address] = index
+            context.ip_to_mac_address_map[address.ip_address] = \
+                    address.mac_address
+
 class CorrelationSessionProcessor(PersistentSessionProcessor):
     def initialize_context(self, context):
         context.whitelist = set()
-        context.address_map = dict()
-        context.mac_address_map = dict()
         context.dns_ip_map = defaultdict(set)
         context.dns_a_map_domain = defaultdict(list)
 
     def process_update_persistent(self, context, update):
         for domain in update.whitelist:
             context.whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))
-
-        for offset, address in enumerate(update.addresses):
-            index = (update.address_table_first_id + offset) \
-                    % update.address_table_size
-            context.address_map[address.ip_address] = index
-            context.mac_address_map[address.ip_address] = address.mac_address
 
         for a_record in update.a_records:
             try:
