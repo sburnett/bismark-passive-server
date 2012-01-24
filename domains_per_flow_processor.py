@@ -1,10 +1,7 @@
 from session_processor import ProcessorCoordinator, SessionProcessor
 
-class DomainsPerFlowSessionProcessor(SessionProcessor):
-    def __init__(self):
-        super(DomainsPerFlowSessionProcessor, self).__init__()
-
-    def process_update(self, context, update):
+class DomainsPerFlowSessionProcessor(PersistentSessionProcessor):
+    def process_update_persistent(self, context, update):
         for packet in update.packet_series:
             try:
                 flow, flow_data = context.flows[packet.flow_id]
@@ -28,13 +25,3 @@ class DomainsPerFlowSessionProcessor(SessionProcessor):
                         flow_data['domains'].add(domain)
             else:
                 flow_data['domains'] = ['unknown']
-
-class DomainsPerFlowProcessorCoordinator(ProcessorCoordinator):
-    persistent_state = dict()
-    ephemeral_state = dict()
-
-    def __init__(self, options):
-        super(DomainsPerFlowProcessorCoordinator, self).__init__(options)
-
-    def create_processor(self, session):
-        return DomainsPerFlowSessionProcessor()
