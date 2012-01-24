@@ -18,7 +18,7 @@ UpdateStatistics = namedtuple('UpdateStatistics',
                                'cname_records_size'])
 
 class UpdateStatisticsSessionProcessor(PersistentSessionProcessor):
-    def initialize_persistent_context(self, context):
+    def initialize_context(self, context):
         context.update_statistics = []
 
     def process_update_persistent(self, persistent_context, update):
