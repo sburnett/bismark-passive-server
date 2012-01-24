@@ -1,5 +1,5 @@
-import datetime
 from collections import namedtuple
+import datetime
 
 PacketEntry = namedtuple('PacketEntry', ['timestamp', 'size', 'flow_id'])
 FlowEntry = namedtuple('FlowEntry',
