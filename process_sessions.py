@@ -215,6 +215,7 @@ def process_sessions(harness,
         pool.join()
     if progressbar is not None:
         progress.finish()
+    processor.complete_global_context(global_context)
 
     print 'Post-processing'
     harness.process_results(global_context)
