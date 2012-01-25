@@ -91,7 +91,9 @@ def process_session((session,
         persistent_context = PersistentContext(session)
         for processor in processors:
             processor.initialize_persistent_context(persistent_context)
-        pickle.dump(persistent_context, open(disk_pickle_path, 'wb'), 2)
+        pickle.dump(persistent_context,
+                    open(disk_pickle_path, 'wb'),
+                    pickle.HIGHEST_PROTOCOL)
     ephemeral_context = EphemeralContext(session)
     for processor in processors:
         processor.initialize_ephemeral_context(ephemeral_context)
@@ -117,16 +119,20 @@ def process_session((session,
     for processor in processors:
         processor.complete_session(persistent_context, ephemeral_context)
     if processed_new_update:
-        pickle.dump(persistent_context, open(disk_pickle_path, 'wb'), 2)
+        pickle.dump(persistent_context,
+                    open(disk_pickle_path, 'wb'),
+                    pickle.HIGHEST_PROTOCOL)
     if multiprocessed:
         ram_pickle_path = join(ram_pickle_root, pickle_filename)
         if processed_new_update:
             pickle.dump((persistent_context, ephemeral_context),
                         open(ram_pickle_path, 'wb'),
-                        2)
+                        pickle.HIGHEST_PROTOCOL)
             return (ram_pickle_path, ram_pickle_path)
         else:
-            pickle.dump(ephemeral_context, open(ram_pickle_path, 'wb'), 2)
+            pickle.dump(ephemeral_context,
+                        open(ram_pickle_path, 'wb'),
+                        pickle.HIGHEST_PROTOCOL)
             return (disk_pickle_path, ram_pickle_path)
     else:
         return (persistent_context, ephemeral_context)
