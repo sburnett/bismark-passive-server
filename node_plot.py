@@ -16,13 +16,6 @@ class NodePlotHarness(harness.Harness):
         node_ids.sort()
         fig = plt.figure(1, figsize=figsize)
         fig.clear()
-        if timestamp:
-            plt.text(1, 0, 'Generated %s' % datetime.now(),
-                     fontsize=8,
-                     color='gray',
-                     transform=fig.transFigure,
-                     verticalalignment='bottom',
-                     horizontalalignment='right')
         for row, node_id in enumerate(node_ids):
             try:
                 ax = plt.subplot(len(node_ids), 1, row, sharex=first_axis)
@@ -41,6 +34,13 @@ class NodePlotHarness(harness.Harness):
             plotter(context, node_id, ax, limits)
         if autoformat:
             fig.autofmt_xdate(bottom=0)
+        if timestamp:
+            plt.text(1, 0, 'Generated %s' % datetime.now(),
+                     fontsize=8,
+                     color='gray',
+                     transform=fig.transFigure,
+                     verticalalignment='bottom',
+                     horizontalalignment='right')
         if tight_layout:
             plt.tight_layout()
         plt.savefig(join(harness.options.plots_directory, filename))
