@@ -22,6 +22,8 @@ import re
 from session_processor import PersistentSessionProcessor
 
 class FlowCorrelationSessionProcessor(PersistentSessionProcessor):
+    """Builds a table mapping flow IDs from update traces to flow objects."""
+
     def initialize_context(self, context):
         context.flows = dict()
 
@@ -30,6 +32,8 @@ class FlowCorrelationSessionProcessor(PersistentSessionProcessor):
             context.flows[flow.flow_id] = flow
 
 class MacAddressCorrelationSessionProcessor(PersistentSessionProcessor):
+    """Builds tables mapping IPs to MAC addresses and address table indices."""
+
     def initialize_context(self, context):
         context.ip_to_mac_address_map = dict()
         context.ip_to_mac_address_index_map = dict()
@@ -42,16 +46,19 @@ class MacAddressCorrelationSessionProcessor(PersistentSessionProcessor):
             context.ip_to_mac_address_map[address.ip_address] = \
                     address.mac_address
 
-class CorrelationSessionProcessor(PersistentSessionProcessor):
+class DomainNameCorrelationSessionProcessor(PersistentSessionProcessor):
+    """Builds a table mapping address table IDs and IP addresses to domain
+    names.  This represents the set of valid DNS mappings for a device to a
+    remote IP address."""
+
     def initialize_context(self, context):
         context.whitelist = set()
         context.dns_ip_map = defaultdict(set)
-        context.dns_a_map_domain = defaultdict(list)
+        context._dns_a_map_domain = defaultdict(list)
 
     def process_update_persistent(self, context, update):
         for domain in update.whitelist:
             context.whitelist.add((domain, re.compile(r'(^|\.)%s$' % domain)))
-
         for a_record in update.a_records:
             try:
                 a_packet = update.packet_series[a_record.packet_id]
@@ -65,7 +72,7 @@ class CorrelationSessionProcessor(PersistentSessionProcessor):
 
     def process_a_record(self, context, a_record, a_packet):
         domain_key = (a_record.address_id, a_record.anonymized, a_record.domain)
-        context.dns_a_map_domain[domain_key].append(a_record)
+        context._dns_a_map_domain[domain_key].append(a_record)
         if not a_record.anonymized:
             for domain, pattern in context.whitelist:
                 if pattern.search(a_record.domain) is not None:
@@ -85,7 +92,7 @@ class CorrelationSessionProcessor(PersistentSessionProcessor):
         domain_key = (cname_record.address_id,
                       cname_record.cname_anonymized,
                       cname_record.cname)
-        a_records = context.dns_a_map_domain.get(domain_key)
+        a_records = context._dns_a_map_domain.get(domain_key)
         if a_records is None:
             return
         for domain, pattern in context.whitelist:
