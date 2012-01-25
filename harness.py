@@ -60,6 +60,9 @@ def parse_args(HarnessClass):
     parser.add_option('-p', '--ignore-pickles', action='store_true',
                       dest='ignore_pickles', default=False,
                       help='Compute from scratch (use when processors change)')
+    parser.add_option('-g', '--cached-global-context', action='store',
+                      dest='cached_global_context', default=None,
+                      help='Attempt to cache global context to the given filename')
     HarnessClass.setup_options(parser)
     options, args = parser.parse_args()
     if len(args) != 2:
@@ -84,7 +87,8 @@ def main(HarnessClass):
                      pickles_path,
                      options.temp_pickles_dir,
                      options.workers,
-                     options.ignore_pickles)
+                     options.ignore_pickles,
+                     options.cached_global_context)
 
 # You can't run this harness, since it's an abstract class.  But to run your own
 # harness, put the following lines in the module with your harness, replacing

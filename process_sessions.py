@@ -136,7 +136,8 @@ def process_sessions(harness,
                      disk_pickle_root,
                      ram_pickles_dir='/dev/shm',
                      num_workers=None,
-                     ignore_pickles=False):
+                     ignore_pickles=False,
+                     cached_global_context=None):
     """
         Args:
         harness: Harness (or subclass)
@@ -160,6 +161,16 @@ def process_sessions(harness,
     ram_pickle_root = join(ram_pickles_dir, str(getpid()))
     makedirs(ram_pickle_root)
     atexit.register(rmtree, ram_pickle_root)
+
+    if cached_global_context is not None:
+        try:
+            global_context = pickle.load(open(cached_global_context, 'r'))
+        except:
+            global_context = None
+        if global_context is not None:
+            print 'Post-processing from cached global context'
+            harness.process_results(global_context)
+            return
 
     if num_workers != 0:
         pool = Pool(processes=num_workers)
@@ -211,6 +222,14 @@ def process_sessions(harness,
         pool.close()
         pool.join()
     processor.complete_global_context(global_context)
+    if cached_global_context is not None:
+        try:
+            pickle.dump(global_context,
+                        open(cached_global_context, 'wb'),
+                        pickle.HIGHEST_PROTOCOL)
+            print 'Cached global context'
+        except:
+            pass
 
     print 'Post-processing'
     harness.process_results(global_context)
