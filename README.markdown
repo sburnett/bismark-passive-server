@@ -4,8 +4,8 @@ Bismark Passive Server-side Data Processing Documentation
 This is a repository of scripts for processing data collected by routers running
 Bismark-passive. (See https://github.com/sburnett/bismark-passive)
 
-We've collected nearly 3 GB of compressed log files from ten Bismark routers,
-and the amount of data and number of routers continues to grow every week.  It's
+We've collected over 5 GB of compressed log files from 14 Bismark routers,
+and the amount of data and number of routers continues to grow every week. It's
 impractical to store and process all the data in a relational database like
 Postgres. (I tried this for a week and got frustrated by sluggish performance
 and awkward SQL queries.)
@@ -44,62 +44,65 @@ Terminology
 * On disk, updates are stored in tarballs. Typically, there are 20 gzipped
   updates per tarball. Note that this is a tarball of gzips, *not* a gzipped
   tarball.
-* The **updates index** is a sqlite database which enables scripts to locate
-  update files inside the tarballs in constant time.
+* The **updates index** is a giant sqlite database which contains efficient
+  representations of all the update files. Normally, you interact with the data
+  via the updates index.
 
 * A **session processor** is a computation to be run on all of a session's
-  updates in order of their sequence number.
+  updates in order of their sequence number. For example, a simple session
+  processor could sum the sizes of all the packets in a session.
 * Session processors write their results to a **session context**, which is
   shared among all session processors operating on that session. Because the
   context is shared among all processors for a session, processors can also read
   data from the context that was previously written by other processors. There
   are typically multiple session processors running on the same session data.
-* The **session context manager** loads and stores session contexts to disk as
-  Python pickle files. This allows the system to augment a session context with
-  new data without rerunning the session processors on all the data for that
-  session.
-* A **processor coordinator** does three things:
-    1. Produces session processor instances for operating on the sessions in the
-       raw data.
-    2. Aggregates the session contexts into a **global context**.
-    3. Presents the global context to the user (e.g., by writing it to a
-       database.)
-* An **experiment harness** runs an ordered set of processor coordinators on the
-  raw data to produce results.
+* After the session processors have processed all updates for all sessions,
+  they merge all of the session contexts into one **global context**, which
+  is then passed to another class for storage, plotting, etc. For example,
+  if a session processor computed the sizes of all packets in each session,
+  then those results could be merged into the global context to compute
+  the sizes of all packets across all sessions.
+* A **harness** runs a set of session processors then does something
+  with their resulting global context.
+
+Example
+-------
+
+The `BytesPerMinuteSessionProcessor` examines each packet and sums their sizes
+into a variable called `bytes_per_minute` in the session context.  After
+`BytesPerMinuteSessionProcessor` session has finished computing
+`bytes_per_minute` for each session, it merges the `bytes_per_minute` value for
+each session into a global `bytes_per_minute` dictionary for each node. Thus,
+`BytesPerMinuteSessionProcessor` computes the total traffic that bismark-passive
+has seen flow through each Bismark router.
 
 Overview of Files
 -----------------
 
-* `collect_uploads.sh` fetches raw log files uploaded by bismark-data-transmit
-  (e.g., `/data/users/bismark/data/http_uploads/passive`), tars them, and puts
-  the tarball in the data directory with the rest of the data (e.g.,
-  `/data/users/bismark/data/passive`).
-
-* `update_parser.py` parses an update file into a Python data structure.
-
-* `updates_index.py` is an interface to the sqlite updates index database and
-  `index_traces.py` uses that interface to build and query the index.
+* `harness.py` contains the base class for the experiment harness.
+* `node_plot.py` is an abstract base class for producing per-node graphs with matplotlib.
+* `update_statistics_plot.py` plots data availability for each router.
+* `arp_traffic.py` and `dhcp_traffic.py` plot the number of ARP and DHCP packets
+  seen by the routers.
+* `concurrent_flows.py` computes and plots the number of concurrent flows
+  seen by each router for various time granularities.
+* `traffic_plots.py` draws aggregate traffic volume graphs.
 
 * `process_sessions.py` has the main processing logic. It loads updates from
-  disk using the updates index, loads and stores contexts, and distributes
-  session processing over multiple cores using the multiprocessing module.
-* `session_processor.py` contains the base classes for session processors and
-  processor coordinators.
-* `session_context.py` contains the session context manager.
-* `utils.py` contains various short functions and datatypes, mainly used by
-  the processor coordinators.
+  the updates index, loads and stores contexts, and distributes session
+  processing over multiple cores using the multiprocessing module.
+* `session_processor.py` contains the abstract base classes for session processors.
 
 * `correlation_processor.py` constructs dictionaries that transform between
   opaque identifiers in the update files and real Python data structures.
   Examples include (1) mapping flow ID numbers to Python objects containing
   information about each flow, (2) mapping IP addresses to address table
   identifiers, and (3) mapping address table identifiers and IP addresses to
-  domain names using DNS response packets. Most experiment harnesses should
-  include the CorrelationProcessorCoordinator.
+  domain names using DNS response packets. Most experiment harnesses will
+  probably include the processors from this file.
 * `byte_count_processor.py` computes various statistics about traffic from each
   router on a per-byte basis over time. Examples include bytes per minute, bytes
-  per port per minute, and bytes per domain per minute. This stores the results
-  in a postgres database.
+  per port per minute, and bytes per domain per minute.
 * `flow_properties_processor.py` computes flow-level information about each
   packet, such as its external-facing port, local device MAC addresses, and
   associated DNS mappings. If you're writing a processor that's interested in
@@ -116,6 +119,18 @@ Overview of Files
 * `update_statistics_processor.py` records information about the update files
   themselves. It can useful for debugging problems with update files.
 
+* `update_parser.py` parses an update file into a Python data structure.
+* `updates_index.py` is an interface to the sqlite updates index database and
+  `index_traces.py` uses that interface to build the index.
+* `anonymize_data.py` syncs an anonymized copy of all the update files to
+  another directory on the same machine.
+* `collect_uploads.sh` fetches raw log files uploaded by bismark-data-transmit
+  (e.g., `/data/users/bismark/data/http_uploads/passive`), tars them, and puts
+  the tarball in the data directory with the rest of the data (e.g.,
+  `/data/users/bismark/data/passive`).
+
+Old code:
+
 * `postgres_session_processor.py` and `sqlite_session_processor.py` are
   abstract processor coordinators that talk to databases. If you want
   your processor coordinator to write its results to Sqlite or Postgres,
@@ -123,16 +138,10 @@ Overview of Files
 * `database_postgres.py` and `database_sqlite.py` are used by the previous
   classes to talk to the databases.
 
-* `harnesses.py` is the entry point for all processing. It runs a set of
-  processors together on the raw updates.
-
 * `schema.sql` and `drop.sql` contain Postgres code for creating and destroying
   database tables for the ByteCountProcessor.
 * `materialized_views.sql` and `refresh_matviews.sql` are also used by
   ByteCountProcessor.
 * `generate_merge_functions.py` autogenerates extra Postgres functions for
   ByteCountProcessor.
-
-* `anonymize_data.py` syncs an anonymized copy of all the update files to
-  another directory on the same machine.
 
