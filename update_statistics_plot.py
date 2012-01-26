@@ -38,16 +38,16 @@ class PlotUpdateStatisticsHarness(Harness):
         for node_id, outage_times in outages.items():
             for beginning in outage_times:
                 outage_points.append((beginning,
-                                      indices[node_id] - 0.2,
-                                      indices[node_id] + 0.2))
+                                      indices[node_id] - 0.3,
+                                      indices[node_id] + 0.3))
 
-        fig = plt.figure()
+        fig = plt.figure(figsize=(10,0.3*len(node_ids)))
         ax = fig.add_subplot(111)
         plt.yticks(range(len(node_ids)), node_ids, family='monospace')
         if len(availability_lines) > 0:
             ax.hlines(*zip(*availability_lines), lw=2)
         if len(outage_points) > 0:
-            ax.vlines(*zip(*outage_points), lw=2, color='r')
+            ax.vlines(*zip(*outage_points), lw=1.5, color='r')
         ax.set_xlabel('Date')
         ax.set_ylabel('Bismark Node ID')
         loc = AutoDateLocator()
