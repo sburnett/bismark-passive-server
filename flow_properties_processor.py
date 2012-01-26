@@ -1,11 +1,8 @@
 from abc import abstractmethod
 
-from session_processor import SessionProcessor
+from session_processor import PersistentSessionProcessor
 
 class FlowPropertiesSessionProcessor(PersistentSessionProcessor):
-    def __init__(self):
-        super(FlowPropertiesSessionProcessor, self).__init__()
-
     @abstractmethod
     def process_packet(self,
                        context,
@@ -16,7 +13,7 @@ class FlowPropertiesSessionProcessor(PersistentSessionProcessor):
                        domains):
         pass
 
-    def process_update(self, context, update):
+    def process_update_persistent(self, context, update):
         for packet in update.packet_series:
             try:
                 flow, flow_data = context.flows[packet.flow_id]
