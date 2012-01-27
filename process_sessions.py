@@ -9,6 +9,10 @@ except ImportError:
     import pickle
 try:
     import progressbar
+    if progressbar.__version__ < '2.3':
+        print "Upgrade to version 2.3 of the 'progressbar' package if " \
+                "you're curious how long this will take"
+        progressbar = None
 except ImportError:
     print "Install the 'progressbar' package if " \
             "you're curious how long this will take"
