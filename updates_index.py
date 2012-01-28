@@ -10,9 +10,11 @@ from zlib import compress, decompress
 
 Session = namedtuple('Session', ['node_id', 'anonymization_context', 'id'])
 
+DATABASE_LOCK_TIMEOUT=600  # 10 minutes
+
 class UpdatesIndex(object):
     def __init__(self, filename):
-        self._conn = sqlite3.connect(filename)
+        self._conn = sqlite3.connect(filename, timeout=DATABASE_LOCK_TIMEOUT)
         self._conn.row_factory = sqlite3.Row
 
 class UpdatesIndexer(UpdatesIndex):
