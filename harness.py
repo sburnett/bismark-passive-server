@@ -63,6 +63,9 @@ def parse_args(HarnessClass):
     parser.add_option('-g', '--cached-global-context', action='store',
                       dest='cached_global_context', default=None,
                       help='Attempt to cache global context to the given filename')
+    parser.add_option('-r', '--run-name', action='store',
+                      dest='run_name', default='default',
+                      help='Assign a name to this processing run')
     HarnessClass.setup_options(parser)
     options, args = parser.parse_args()
     if len(args) != 2:
@@ -75,7 +78,9 @@ def main(HarnessClass):
     (opts, args) = parse_args(HarnessClass)
     global options
     options = opts
-    pickles_path = join(args['pickles_directory'], HarnessClass.__name__)
+    pickles_path = join(args['pickles_directory'],
+                        options.run_name,
+                        HarnessClass.__name__)
     try:
         makedirs(pickles_path)
     except OSError, e:
