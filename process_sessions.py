@@ -189,6 +189,11 @@ def process_sessions(harness,
     index = UpdatesReader(index_filename)
     processors = harness.instantiate_processors()
     for session in index.sessions:
+        if harness.exclude_nodes and session.node_id in harness.exclude_nodes:
+            continue
+        if harness.include_nodes \
+                and session.node_id not in harness.include_nodes:
+            continue
         process_args.append((session,
                              index_filename,
                              disk_pickle_root,

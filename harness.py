@@ -11,6 +11,13 @@ class Harness(object):
 
     processors = []
 
+    # Exclude this set of nodes from processing.
+    # Exclusion takes priority over inclusion.
+    exclude_nodes = set([])
+    # Include only this set of nodes while processing
+    # Exclusion takes priority over inclusion.
+    include_nodes = set([])
+
     def __init__(self):
         pass
 
