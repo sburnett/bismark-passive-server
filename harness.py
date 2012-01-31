@@ -86,8 +86,8 @@ def main(HarnessClass):
     global options
     options = opts
     pickles_path = join(args['pickles_directory'],
-                        options.run_name,
-                        HarnessClass.__name__)
+                        HarnessClass.__name__,
+                        options.run_name)
     try:
         makedirs(pickles_path)
     except OSError, e:
