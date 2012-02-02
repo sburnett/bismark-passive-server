@@ -18,6 +18,8 @@ except ImportError:
             "you're curious how long this will take"
     progressbar = None
 from shutil import rmtree
+import sys
+import traceback
 
 from updates_index import UpdatesReader
 
@@ -176,6 +178,8 @@ def process_sessions(harness,
         try:
             global_context = pickle.load(open(cached_global_context, 'r'))
         except:
+            print 'Failed to load cached global context:'
+            traceback.print_exc(file=sys.stdout)
             global_context = None
         if global_context is not None:
             print 'Post-processing from cached global context'
@@ -244,7 +248,8 @@ def process_sessions(harness,
                         pickle.HIGHEST_PROTOCOL)
             print 'Cached global context'
         except:
-            pass
+            print 'Failed to save cached global context'
+            traceback.print_exc(file=sys.stdout)
 
     print 'Post-processing'
     harness.process_results(global_context)
