@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
 
-from session_processor import EphemeralSessionProcessor
+from bismarkpassive.session_processor import EphemeralSessionProcessor
 
 class MetaStatisticsProcessor(EphemeralSessionProcessor):
     def initialize_ephemeral_context(self, context):

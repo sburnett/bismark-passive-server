@@ -1,7 +1,7 @@
 from collections import defaultdict, namedtuple
 import datetime
 
-from session_processor import PersistentSessionProcessor
+from bismarkpassive.session_processor import PersistentSessionProcessor
 
 UpdateStatistics = namedtuple('UpdateStatistics',
                               ['node_id',

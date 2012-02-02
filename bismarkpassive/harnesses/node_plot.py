@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from os import makedirs
 from os.path import join
 
-import harness
+import bismarkpassive.harness as harness
 
 class NodePlotHarness(harness.Harness):
     def plot(self, plotter, context, filename, node_ids,
