@@ -56,33 +56,47 @@ class Harness(object):
         pass
 
 def parse_args(HarnessClass):
-    usage = 'usage: %prog [options] index_filename pickles_directory'
+    usage = 'usage: %prog [options] ' \
+            'database_backend database_name pickles_directory'
     parser = OptionParser(usage=usage)
     parser.add_option('-t', '--temp-pickles-dir', action='store',
                       dest='temp_pickles_dir', default='/dev/shm',
                       help='Directory for temporary runtime pickle storage')
     parser.add_option('-w', '--workers', type='int', action='store',
-                      dest='workers', default=None,
+                      dest='workers',
                       help='Maximum number of worker threads to use')
     parser.add_option('-p', '--ignore-pickles', action='store_true',
                       dest='ignore_pickles', default=False,
                       help='Compute from scratch (use when processors change)')
     parser.add_option('-g', '--cached-global-context', action='store',
-                      dest='cached_global_context', default=None,
+                      dest='cached_global_context',
                       help='Attempt to cache global context to the given filename')
     parser.add_option('-r', '--run-name', action='store',
                       dest='run_name', default='default',
                       help='Assign a name to this processing run')
+    parser.add_option('--indexer-postgres-user', action='store',
+                      dest='indexer_postgres_user',
+                      help='Log into Postgres as this user')
+    parser.add_option('--indexer-postgres-host', action='store',
+                      dest='indexer_postgres_host',
+                      help='Log into Postgres on this host')
     HarnessClass.setup_options(parser)
     options, args = parser.parse_args()
-    if len(args) != 2:
+    if len(args) != 3:
         parser.error('Missing required option')
-    mandatory = { 'index_filename': args[0],
-                  'pickles_directory': args[1] }
-    return options, mandatory
+    mandatory = { 'database_backend': args[0],
+                  'database_name': args[1],
+                  'pickles_directory': args[2],
+                }
+    database_options = {}
+    if options.indexer_postgres_host is not None:
+        database_options['postgres_host'] = options.indexer_postgres_host
+    if options.indexer_postgres_user is not None:
+        database_options['postgres_user'] = options.indexer_postgres_user
+    return options, mandatory, database_options
 
 def main(HarnessClass):
-    (opts, args) = parse_args(HarnessClass)
+    (opts, args, database_options) = parse_args(HarnessClass)
     global options
     options = opts
     pickles_path = join(args['pickles_directory'],
@@ -95,7 +109,9 @@ def main(HarnessClass):
             raise
     harness = HarnessClass()
     process_sessions(harness,
-                     args['index_filename'],
+                     args['database_backend'],
+                     args['database_name'],
+                     database_options,
                      pickles_path,
                      options.temp_pickles_dir,
                      options.workers,

@@ -34,7 +34,7 @@ class SessionContext(object):
         return self._node_id
     @property
     def anonymization_context(self):
-        return self._anonymization_id
+        return self._anonymization_context
     @property
     def session_id(self):
         return self._session_id
@@ -52,7 +52,9 @@ class GlobalContext(object):
     pass
 
 def process_session((session,
-                     index_filename,
+                     database_backend,
+                     database_name,
+                     database_options,
                      disk_pickle_root,
                      ram_pickle_root,
                      processors,
@@ -65,7 +67,7 @@ def process_session((session,
             - node_id
             - anonymization_context
             - session_id 
-        index_filename: string
+        database_name: string
             the filename of the updates index, which is where all
             updates information comes from.
         disk_pickle_root: String
@@ -106,7 +108,7 @@ def process_session((session,
 
     processed_new_update = False
     current_tarname = None
-    index = UpdatesReader(index_filename)
+    index = UpdatesReader(database_backend, database_name, **database_options)
     session_data = index.session_data(
             session, persistent_context.last_sequence_number_processed + 1)
     for sequence_number, update in session_data:
@@ -144,7 +146,9 @@ def process_session((session,
         return (persistent_context, ephemeral_context)
 
 def process_sessions(harness,
-                     index_filename,
+                     database_backend,
+                     database_name,
+                     database_options,
                      disk_pickle_root,
                      ram_pickles_dir='/dev/shm',
                      num_workers=None,
@@ -153,7 +157,7 @@ def process_sessions(harness,
     """
         Args:
         harness: Harness (or subclass)
-        index_filename: String
+        database_name: String
             the file which is the basis of index sqlite database. This is given
             as a command line argument
         disk_pickle_root: String
@@ -190,8 +194,8 @@ def process_sessions(harness,
         pool = Pool(processes=num_workers)
 
     process_args = []
-    index = UpdatesReader(index_filename)
     processors = harness.instantiate_processors()
+    index = UpdatesReader(database_backend, database_name, **database_options)
     for session in index.sessions:
         if harness.exclude_nodes and session.node_id in harness.exclude_nodes:
             continue
@@ -199,7 +203,9 @@ def process_sessions(harness,
                 and session.node_id not in harness.include_nodes:
             continue
         process_args.append((session,
-                             index_filename,
+                             database_backend,
+                             database_name,
+                             database_options,
                              disk_pickle_root,
                              ram_pickle_root,
                              processors,
@@ -240,7 +246,8 @@ def process_sessions(harness,
                         persistent_context, ephemeral_context, global_context)
         pool.close()
         pool.join()
-    processor.complete_global_context(global_context)
+    for processor in processors:
+        processor.complete_global_context(global_context)
     if cached_global_context is not None:
         try:
             pickle.dump(global_context,
