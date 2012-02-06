@@ -3,6 +3,11 @@ from datetime import datetime
 
 from bismarkpassive.session_processor import EphemeralSessionProcessor
 
+def max_date():
+    return datetime.max
+def min_date():
+    return datetime.min
+
 class MetaStatisticsProcessor(EphemeralSessionProcessor):
     def initialize_ephemeral_context(self, context):
         context.oldest_timestamp = datetime.max
@@ -17,14 +22,14 @@ class MetaStatisticsProcessor(EphemeralSessionProcessor):
     def initialize_global_context(self, global_context):
         global_context.oldest_timestamp = datetime.max
         global_context.oldest_timestamp_per_node = \
-                defaultdict(lambda: datetime.max)
-        global_context.oldest_timestamp_per_anyonymization_context = \
-                defaultdict(lambda: datetime.max)
+                defaultdict(max_date)
+        global_context.oldest_timestamp_per_anonymization_context = \
+                defaultdict(max_date)
         global_context.newest_timestamp = datetime.min
         global_context.newest_timestamp_per_node = \
-                defaultdict(lambda: datetime.min)
+                defaultdict(min_date)
         global_context.newest_timestamp_per_anyonymization_context = \
-                defaultdict(lambda: datetime.min)
+                defaultdict(min_date)
 
     def merge_contexts_ephemeral(self, ephemeral_context, global_context):
         global_context.oldest_timestamp = \
@@ -33,18 +38,18 @@ class MetaStatisticsProcessor(EphemeralSessionProcessor):
         global_context.newest_timestamp = \
                 max(global_context.newest_timestamp,
                     ephemeral_context.newest_timestamp)
-        with ephemeral_context.node_id as key:
-            global_context.oldest_timestamp_per_node[key] = \
-                    min(global_context.oldest_timestamp_per_node[key],
-                        ephemeral_context.oldest_timestamp)
-            global_context.newest_timestamp_per_node[key] = \
-                    max(global_context.newest_timestamp_per_node[key],
-                        ephemeral_context.newest_timestamp)
-        with (ephemeral_context.node_id,
-              ephemeral_context.anonymization_context) as key:
-            global_context.oldest_timestamp_per_anyonymization_context[key] = \
-                    min(global_context.oldest_timestamp_per_node[key],
-                        ephemeral_context.oldest_timestamp)
-            global_context.newest_timestamp_per_anyonymization_context[key] = \
-                    max(global_context.newest_timestamp_per_node[key],
-                        ephemeral_context.newest_timestamp)
+        key = ephemeral_context.node_id 
+        global_context.oldest_timestamp_per_node[key] = \
+                min(global_context.oldest_timestamp_per_node[key],
+                    ephemeral_context.oldest_timestamp)
+        global_context.newest_timestamp_per_node[key] = \
+                max(global_context.newest_timestamp_per_node[key],
+                    ephemeral_context.newest_timestamp)
+        key = (ephemeral_context.node_id,
+               ephemeral_context.anonymization_context)
+        global_context.oldest_timestamp_per_anonymization_context[key] = \
+                min(global_context.oldest_timestamp_per_anonymization_context[key],
+                    ephemeral_context.oldest_timestamp)
+        global_context.newest_timestamp_per_anyonymization_context[key] = \
+                max(global_context.newest_timestamp_per_anyonymization_context[key],
+                    ephemeral_context.newest_timestamp)
