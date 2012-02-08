@@ -1,19 +1,19 @@
 from collections import defaultdict
 from datetime import datetime
 
-from bismarkpassive.session_processor import EphemeralSessionProcessor
+from bismarkpassive import SessionProcessor
 
 def max_date():
     return datetime.max
 def min_date():
     return datetime.min
 
-class MetaStatisticsProcessor(EphemeralSessionProcessor):
+class MetaStatisticsProcessor(SessionProcessor):
     def initialize_ephemeral_context(self, context):
         context.oldest_timestamp = datetime.max
         context.newest_timestamp = datetime.min
 
-    def process_update_ephemeral(self, ephemeral_context, update):
+    def process_update(self, persistent_context, ephemeral_context, update):
         ephemeral_context.oldest_timestamp = \
                 min(ephemeral_context.oldest_timestamp, update.timestamp)
         ephemeral_context.newest_timestamp = \
@@ -31,7 +31,7 @@ class MetaStatisticsProcessor(EphemeralSessionProcessor):
         global_context.newest_timestamp_per_anyonymization_context = \
                 defaultdict(min_date)
 
-    def merge_contexts_ephemeral(self, ephemeral_context, global_context):
+    def merge_contexts(self, persistent_context, ephemeral_context, global_context):
         global_context.oldest_timestamp = \
                 min(global_context.oldest_timestamp,
                     ephemeral_context.oldest_timestamp)

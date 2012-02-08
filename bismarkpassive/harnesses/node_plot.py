@@ -4,9 +4,9 @@ import matplotlib.pyplot as plt
 from os import makedirs
 from os.path import join
 
-import bismarkpassive.harness as harness
+import bismarkpassive
 
-class NodePlotHarness(harness.Harness):
+class NodePlotHarness(bismarkpassive.Harness):
     def plot(self, plotter, context, filename, node_ids,
                 figsize=(15,20),
                 limits=(None, None),
@@ -45,9 +45,9 @@ class NodePlotHarness(harness.Harness):
                      horizontalalignment='right')
         if tight_layout:
             plt.tight_layout()
-        plt.savefig(join(harness.options.plots_directory, filename))
+        plt.savefig(join(self.options.plots_directory, filename))
 
-class PlotPerNodeHarness(harness.Harness):
+class PlotPerNodeHarness(bismarkpassive.Harness):
     def plot(self, plotter, context, directory, node_ids,
                 extension='png',
                 figsize=(11, 8.5),
@@ -58,7 +58,7 @@ class PlotPerNodeHarness(harness.Harness):
                 autoformat=True,
                 tight_layout=True):
         try:
-            makedirs(join(harness.options.plots_directory, directory))
+            makedirs(join(self.options.plots_directory, directory))
         except OSError, e:
             if e.errno != EEXIST:
                 raise
@@ -87,6 +87,6 @@ class PlotPerNodeHarness(harness.Harness):
                          horizontalalignment='right')
             if tight_layout:
                 plt.tight_layout()
-            plt.savefig(join(harness.options.plots_directory,
+            plt.savefig(join(self.options.plots_directory,
                              directory,
                              '%s.%s' % (node_id, extension)))

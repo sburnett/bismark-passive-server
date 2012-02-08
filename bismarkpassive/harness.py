@@ -7,26 +7,58 @@ from os.path import join
 from process_sessions import process_sessions
 
 class Harness(object):
+
+    """
+    An abstract base class for consuming the results of computations on
+    bismark-passive data.
+
+    A harness does two things: First, it specifies a sequence of session
+    processors to run on the bismark-passive data. Second, it does something
+    useful with the results of those session processors.
+    
+    """
+
     __metaclass__ = ABCMeta
 
-    processors = []
+    def __init__(self, options):
+        self._options = options
 
-    # Exclude this set of nodes from processing.
-    # Exclusion takes priority over inclusion.
-    exclude_nodes = set([])
-    # Include only this set of nodes while processing
-    # Exclusion takes priority over inclusion.
-    include_nodes = set([])
+    @property
+    def options(self):
+        """Return the command line options.
+        
+        Please don't modify this object."""
+        return self._options
 
-    def __init__(self):
-        pass
+    @property
+    def processors(self):
+        """These are the session processor classes to instantiate and run for
+        each session.
+
+        Session processors are always run the the order given."""
+        return []
+
+    @property
+    def exclude_nodes(self):
+        """Exclude this set of nodes from processing.
+        
+        Exclusion takes priority over inclusion."""
+        return set([])
+
+    @property
+    def include_nodes(self):
+        """Include only this set of nodes while processing.
+
+        Exclusion takes priority over inclusion."""
+        return set([])
 
     @staticmethod
     def setup_options(parser):
-        """Add arguments for your custom coordinator here. Keep arguments in
-        alphabetical order. Don't use short options in this function.
-        You can also add options in a subclass, but make sure to
-        call this parent version first."""
+        """Add command line arguments for the harness.
+        
+        Keep arguments in alphabetical order. Don't use short options in this
+        function. You can also add options in a subclass, but make sure to call
+        this parent version first."""
         parser.add_option('--db_filename', action='store', dest='db_filename',
                           help='Sqlite database filename')
         parser.add_option('--db_host', action='store', dest='db_host',
@@ -49,11 +81,13 @@ class Harness(object):
 
     def instantiate_processors(self):
         """Override this method to pass custom arguments to processors."""
-        return map(lambda P: P(), self.processors)
+        return map(lambda P: P(self.options), self.processors)
 
     @abstractmethod
     def process_results(self, global_context):
-        pass
+        """Override this method to do something useful with the global context.
+
+        The global context contains the results of all the processors we ran."""
 
 def parse_args(HarnessClass):
     usage = 'usage: %prog [options] ' \
@@ -96,9 +130,7 @@ def parse_args(HarnessClass):
     return options, mandatory, database_options
 
 def main(HarnessClass):
-    (opts, args, database_options) = parse_args(HarnessClass)
-    global options
-    options = opts
+    (options, args, database_options) = parse_args(HarnessClass)
     pickles_path = join(args['pickles_directory'],
                         HarnessClass.__name__,
                         options.run_name)
@@ -107,7 +139,7 @@ def main(HarnessClass):
     except OSError, e:
         if e.errno != EEXIST:
             raise
-    harness = HarnessClass()
+    harness = HarnessClass(options)
     process_sessions(harness,
                      args['database_backend'],
                      args['database_name'],
@@ -118,9 +150,11 @@ def main(HarnessClass):
                      options.ignore_pickles,
                      options.cached_global_context)
 
-# You can't run this harness, since it's an abstract class.  But to run your own
+# You can't run this harness, since it's an abstract class. To run your own
 # harness, put the following lines in the module with your harness, replacing
 # "Harness" with the name of your Harness subclass.
 #
-#if __name__ == '__main__':
-#    main(Harness)
+#   from bismarkpassive import main
+#   ...
+#   if __name__ == '__main__':
+#       main(Harness)
