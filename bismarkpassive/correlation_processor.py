@@ -21,7 +21,7 @@ from datetime import datetime, timedelta
 from itertools import ifilter
 import re
 
-from bismarkpassive import PersistentSessionProcessor
+from session_processor import PersistentSessionProcessor
 
 class FlowCorrelationSessionProcessor(PersistentSessionProcessor):
     """Builds a table mapping flow IDs from update traces to flow objects."""

@@ -44,7 +44,7 @@ class SessionProcessor(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, options):
-        self._options(options)
+        self._options = options
 
     @property
     def options(self):

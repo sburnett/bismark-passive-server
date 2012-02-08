@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime
 
-from bismarkpassive import SessionProcessor
+from session_processor import SessionProcessor
 
 def max_date():
     return datetime.max
