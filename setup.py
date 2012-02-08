@@ -4,7 +4,5 @@ setup(
         version='1.0',
         packages=[
             'bismarkpassive',
-            'bismarkpassive.processors',
-            'bismarkpassive.harnesses'
             ]
         )
