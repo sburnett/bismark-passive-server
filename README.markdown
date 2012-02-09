@@ -29,6 +29,28 @@ Verify successful installation:
 
     (cd /tmp && python -m bismarkpassive.harness)
 
+Generating your own index
+-------------------------
+
+Most people don't need to do this. You can just use the index at
+`dp5.gtnoise.net:/data/users/sburnett/index.sqlite`.
+
+If you have your own bismark-passive log files and don't have read access to
+`dp5.gtnoise.net:/data/users/sburnett/index.sqlite`, you'll need to build your
+own updates index.
+
+    python -m bismarkpassive.index_traces <path_to_updates> sqlite <path_to_index>
+
+Make sure <path_to_index> isn't in your NFS home directory. The index contains
+parsed copies of all the update file and is quite large. Building the index
+takes several hours, so it's best to let it run overnight.
+
+Example
+-------
+
+`example.py` is a small yet complete session processor and harness. But please
+read the rest of this file first.
+
 Terminology
 -----------
 
@@ -73,46 +95,51 @@ Terminology
 * A **harness** runs a set of session processors then does something with their
   resulting global context.
 
-Example
--------
-
-See `example.py` for a small yet complete session processor and harness.
-
 Overview of Files
 -----------------
 
-* `__init__.py`` contains the public symbols exported by the package. These are
+Modules you'll want to read before getting started:
+
+- `bismarkpassive/__init__.py` contains the public symbols exported by the package. These are
   typically all you'll need to write your own processors and harnesses.
-* `harness.py` contains the base class for the experiment harness.
-* `node_plot.py` is an abstract base class for producing per-node graphs with matplotlib.
-* `update_statistics_plot.py` plots data availability for each router.
+- `bismarkpassive/harness.py` contains the base class for experiment harnesses.
+- `bismarkpassive/session_processor.py` contains the abstract base classes for session processors.
+- `bismarkpassive/update_parser.py` parses an update file into a Python data structure.
 
-* `session_processor.py` contains the abstract base classes for session processors.
-* `process_sessions.py` has the main processing logic. It loads updates from
-  the updates index, loads and stores contexts, and distributes session
-  processing over multiple cores using the multiprocessing module.
+Modules that you'll find helpful when writing your own harnesses:
 
-* `processors/correlation_processor.py` constructs dictionaries that transform
+- `bismarkpassive/node_plot_harness.py` is an abstract base class for producing per-node graphs with matplotlib.
+- `bismarkpassive/correlation_processor.py` constructs dictionaries that transform
   between opaque identifiers in the update files and real Python data
   structures.  Examples include (1) mapping flow ID numbers to Python objects
   containing information about each flow, (2) mapping IP addresses to address
   table identifiers, and (3) mapping address table identifiers and IP addresses
   to domain names using DNS response packets. Most experiment harnesses will
   probably include the processors from this file.
-* `processors/meta_statistics_processor.py` keeps track of what's been processed
+- `bismarkpassive/meta_statistics_processor.py` keeps track of what's been processed
   during *this processing run*, as opposed to previous processing runs loaded
   from disk. It's useful for figuring out what's been updated since the last
   time processing ran.
-* `processors/update_statistics_processor.py` records information about the
+- `bismarkpassive/update_statistics_processor.py` records information about the
   update files themselves. It can useful for debugging problems with update
   files.
 
-* `update_parser.py` parses an update file into a Python data structure.
-* `updates_index.py` is an interface to the sqlite updates index database and
-  `index_traces.py` uses that interface to build the index.
-* `anonymize_data.py` syncs an anonymized copy of all the update files to
+Modules that provide the inner workings of the processing. You probably don't
+need to look inside them.
+
+- `bismarkpassive/process_sessions.py` has the main processing logic. It loads updates from
+  the updates index, loads and stores contexts, and distributes session
+  processing over multiple cores using the multiprocessing module.
+- `bismarkpassive/updates_index.py` is an interface to the sqlite updates index
+  database. `bismarkpassive/updates_index_postgres.py` and
+  `bismarkpassive/updates_index_sqlite.py` are the two database backends.
+- `bismarkpassive/index_traces.py` uses that interface to build the index.
+
+Some miscillaneous scripts that you shouldn't run unless you know what you're doing:
+
+- `scripts/anonymize_data.py` syncs an anonymized copy of all the update files to
   another directory on the same machine.
-* `collect_uploads.sh` fetches raw log files uploaded by bismark-data-transmit
+- `scripts/collect_uploads.sh` fetches raw log files uploaded by bismark-data-transmit
   (e.g., `/data/users/bismark/data/http_uploads/passive`), tars them, and puts
   the tarball in the data directory with the rest of the data (e.g.,
-  `/data/users/bismark/data/passive`).
+  `/data/users/bismark/data/passive`). It also syncs them to a remote machine.
