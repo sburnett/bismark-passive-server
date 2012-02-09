@@ -141,6 +141,8 @@ need to look inside them.
 
 Some miscillaneous scripts that you shouldn't run unless you know what you're doing:
 
+- `scripts/updates_index.sql` lets you create the database schema for your index
+  if you want to store your index on postgres instead of sqlite.
 - `scripts/anonymize_data.py` syncs an anonymized copy of all the update files to
   another directory on the same machine.
 - `scripts/collect_uploads.sh` fetches raw log files uploaded by bismark-data-transmit
