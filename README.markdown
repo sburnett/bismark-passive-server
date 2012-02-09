@@ -20,14 +20,14 @@ Installation
 
 Install the code before using it:
 
- python build
- python install --user
+    python build
+    python install --user
 
 Whenever you `git pull` you need to reinstall using the same procedure.
 
 Verify successful installation:
 
- (cd /tmp && python -m bismarkpassive.harness)
+    (cd /tmp && python -m bismarkpassive.harness)
 
 Terminology
 -----------
