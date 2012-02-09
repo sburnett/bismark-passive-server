@@ -41,9 +41,13 @@ own updates index.
 
     python -m bismarkpassive.index_traces <path_to_updates> sqlite <path_to_index>
 
-Make sure <path_to_index> isn't in your NFS home directory. The index contains
-parsed copies of all the update file and is quite large. Building the index
-takes several hours, so it's best to let it run overnight.
+Make sure `<path_to_index>` isn't in your NFS home directory. The index is quite
+large because it contains parsed copies of all the update files. Building the
+index takes several hours, so it's best to let it run overnight.
+
+Any time you receive new updates and want to use them for processing, you'll
+need to rerun the indexer. Don't worry, subsequent runs are much faster. I run
+the indexer once per hour and it only takes a minute.
 
 Example
 -------
