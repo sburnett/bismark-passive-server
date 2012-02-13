@@ -18,7 +18,9 @@ system has two important properties:
 Installation
 ------------
 
-Install the code before using it:
+If you run everything from the main `bismark-passive-server` directory, then you
+don't need to install the package. If you want to be able to run processing
+outside this directory then you need to install the code:
 
     python setup.py install --user
 
@@ -28,7 +30,10 @@ Verify successful installation:
 
     (cd /tmp && python -m bismarkpassive.harness)
 
-This command should exit with no output.
+If you want to see progress bars during long computations, install the
+`progressbar` package. For example, on `dp4.gtnoise.net`, you can run:
+
+    easy_install --user progressbar
 
 Generating your own index
 -------------------------
@@ -59,7 +64,7 @@ read the rest of this file first.
 Terminology
 -----------
 
-Data collection and storage
+Data collection and storage:
 
 - Each Bismark router has a **node id**, which is typically its LAN-facing MAC
   address prefixed by "OW". Example: `OW0123456789AB`
@@ -85,7 +90,7 @@ Data collection and storage
   representations of all the update files. You interact with the data via the
   updates index and should never read the data files directly.
 
-Data processing
+Data processing:
 
 - A **session processor** is a computation which we run on all of a session's
   updates in order of their sequence numbers. For example, a simple session
