@@ -20,8 +20,8 @@ Installation
 
 Install the code before using it:
 
-    python build
-    python install --user
+    python setup.py build
+    python setup.py install --user
 
 Whenever you `git pull` you need to reinstall using the same procedure.
 
