@@ -18,9 +18,9 @@ system has two important properties:
 Installation
 ------------
 
-If you run everything from the main `bismark-passive-server` directory, then you
-don't need to install the package. If you want to be able to run processing
-outside this directory then you need to install the code:
+If you run everything from the `bismark-passive-server` directory, then **you
+don't need to install anything**. If you want to be able to run processing
+outside this directory then you can install the package to your home directory:
 
     python setup.py install --user
 
@@ -30,7 +30,7 @@ Verify successful installation:
 
     (cd /tmp && python -m bismarkpassive.harness)
 
-If you want to see progress bars during long computations, install the
+If you want to see **progress bars** during long computations, install the
 `progressbar` package. For example, on `dp4.gtnoise.net`, you can run:
 
     easy_install --user progressbar
@@ -38,7 +38,7 @@ If you want to see progress bars during long computations, install the
 Generating your own index
 -------------------------
 
-Most people don't need to do this. You can just use the index at
+**Most people don't need to do this.** You can just use the index at
 `dp5.gtnoise.net:/data/users/sburnett/index.sqlite`.
 
 If you have your own bismark-passive log files and don't have read access to
@@ -52,8 +52,8 @@ large because it contains parsed copies of all the update files. Building the
 index takes several hours, so it's best to let it run overnight.
 
 Any time you receive new updates and want to use them for processing, you'll
-need to rerun the indexer. Don't worry, subsequent runs are much faster. I run
-the indexer once per hour and it only takes a minute.
+need to **rerun the indexer**. Don't worry, subsequent runs are much faster. I
+run the indexer once per hour and it only takes a minute.
 
 Example
 -------
