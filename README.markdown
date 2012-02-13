@@ -18,9 +18,10 @@ system has two important properties:
 Installation
 ------------
 
-If you run everything from the `bismark-passive-server` directory, then **you
-don't need to install anything**. If you want to be able to run processing
-outside this directory then you can install the package to your home directory:
+If you will store all your custom processing modules in the
+`bismark-passive-server` directory, then **you don't need to install anything**.
+If you want to be able to store processing outside this directory then you can
+install the package to your home directory:
 
     python setup.py install --user
 
