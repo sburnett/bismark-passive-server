@@ -20,7 +20,6 @@ Installation
 
 Install the code before using it:
 
-    python setup.py build
     python setup.py install --user
 
 Whenever you `git pull` you need to reinstall using the same procedure.
@@ -28,6 +27,8 @@ Whenever you `git pull` you need to reinstall using the same procedure.
 Verify successful installation:
 
     (cd /tmp && python -m bismarkpassive.harness)
+
+This command should exit with no output.
 
 Generating your own index
 -------------------------
@@ -58,46 +59,55 @@ read the rest of this file first.
 Terminology
 -----------
 
-* Each Bismark router has a **node id**, which is typically its LAN-facing MAC
-  address prefixed by "OW". Example: OW0123456789AB
-* Every bismark-passive router has a unique **anonymization context** (or
+Data collection and storage
+
+- Each Bismark router has a **node id**, which is typically its LAN-facing MAC
+  address prefixed by "OW". Example: `OW0123456789AB`
+- Every bismark-passive router has a unique **anonymization context** (or
   **anonymization id**) under which it anonymizes (i.e., hashes) sensitive
-  information like IP addresses, MAC addresses and domain names. When a router
-  is reflashed, it receives a fresh anonymization context; otherwise, a router's
-  context typically doesn't change. Data anonymized under different
+  information like IP addresses, MAC addresses and domain names. When you
+  reflash a router it receives a fresh anonymization context; otherwise, a
+  router's context typically never changes. Data anonymized under different
   anonymization contexts cannot be compared for equality, even if those contexts
   were used on the same router.
-* A **session** is a running bismark-passive process. Each time bismark-passive
-  restarts (e.g., because of a softare update, a crash, a router reboot) is
-  considered the start of a new session. Sessions are identified by their
-  **session id**, which is the Unix timestamp when the session started.
-* An **update** is a single log file sent by a bismark-passive router. Every
+- A **session** is a running instance of the `bismark-passive` binary. Each time
+  bismark-passive starts (e.g., because of a softare update, a crash, a router
+  reboot) is considered the start of a new session. We identify sessions by the
+  Unix timestamp when the session started, referred to as the **session id**.
+- An **update** is a single log file sent by a bismark-passive router. Every
   update has an associated node id, anonymization context, session id, and
   sequence number. Updates typically contain 30 seconds of passive measurement
   data; they are always gzipped.
-* On disk, updates are stored in tarballs. Typically, there are 20 gzipped
-  updates per tarball. Note that this is a tarball of gzips, *not* a gzipped
-  tarball.
-* The **updates index** is a giant sqlite database which contains efficient
+- On disk, we store updates in tarballs. Typically, there are 20 gzipped
+  updates per tarball. Note that these are tarballs of gzips, *not* gzipped
+  tarballs.
+- The **updates index** is a giant sqlite database containing efficient
   representations of all the update files. You interact with the data via the
   updates index and should never read the data files directly.
 
-* A **session processor** is a computation run on all of a session's updates in
-  order of their sequence number. For example, a simple session processor could
-  sum the sizes of all the packets in a session.
-* Session processors write their results to a **session context**, which is
+Data processing
+
+- A **session processor** is a computation which we run on all of a session's
+  updates in order of their sequence numbers. For example, a simple session
+  processor could sum the sizes of all the packets in a session.
+- Session processors write their results to a **session context**, which is
   shared among all session processors operating on that session. Because the
   context is shared among all processors for a session, processors can also read
   data from the context that was previously written by other processors. (You
   typically run multiple session processors on the same session data.)
-* After the session processors process all updates for all sessions, they merge
+- After the session processors process all updates for all sessions, they merge
   the session contexts into one **global context**, which is then passed to
   another class for storage, plotting, etc. For example, if a session processor
   computes the sizes of all packets in each session, then those results could be
   merged into the global context to compute the sizes of all packets across all
   sessions.
-* A **harness** runs a set of session processors then does something with their
+- A **harness** runs a set of session processors then does something with their
   resulting global context.
+- After each session processor finishes processing all available updates, it
+  writes the session context to disk as a **pickle file**. The next time you run
+  the same harness to process additional data, the session processors restore
+  their contexts from from the pickle files and resume processing from where
+  they left off. This drastically reduces processing time.
 
 Overview of Files
 -----------------
