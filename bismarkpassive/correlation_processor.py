@@ -1,21 +1,3 @@
-""" This module maintains the following useful state in the session context:
-
-    flows maps flow IDs to a tuple of a flow object (containing IP addresses,
-          port numbers, etc.) and a set of domains corresponding to
-          the DNS mappings for the flow's source and destination IPs
-          that were valid when the flow was created.
-    address_map maps LAN IP addresses to indices in update.addresses.
-                These indices are used in several places as placeholders
-                for local MAC addresses (anywhere you see "address_id").
-    mac_address_map maps LAN IP address to local MAC addresses; this
-                    is a shortcut for address_map if all you need is
-                    to look up the MAC address of a local device.
-    ip_to_domain_map maps an address_id (i.e., a local device) and a
-                remote IP address to a set of domain names and
-                valid time windows for those mappings. This is
-                the set of valid DNS mappings for a device.
-"""
-
 from collections import defaultdict
 from datetime import datetime, timedelta
 from itertools import ifilter
@@ -24,7 +6,9 @@ import re
 from session_processor import PersistentSessionProcessor
 
 class FlowCorrelationSessionProcessor(PersistentSessionProcessor):
-    """Builds a table mapping flow IDs from update traces to flow objects."""
+
+    """Builds a table mapping flow IDs to flow objects. Flow IDs are opaque
+    identifiers from update files."""
 
     def initialize_context(self, context):
         context.flows = dict()
@@ -34,7 +18,9 @@ class FlowCorrelationSessionProcessor(PersistentSessionProcessor):
             context.flows[flow.flow_id] = flow
 
 class MacAddressCorrelationSessionProcessor(PersistentSessionProcessor):
-    """Builds tables mapping IPs to MAC addresses and address table indices."""
+
+    """Builds tables mapping IPs to MAC addresses and address table indices.
+    Address table indices are opaque identifiers from update files."""
 
     def initialize_context(self, context):
         context.ip_to_mac_address_map = dict()
@@ -49,6 +35,7 @@ class MacAddressCorrelationSessionProcessor(PersistentSessionProcessor):
                     address.mac_address
 
 class DomainCorrelationSessionProcessor(PersistentSessionProcessor):
+
     """Builds a table mapping address table IDs and IP addresses to domain
     names. This represents the set of valid DNS mappings for each device."""
 
@@ -131,6 +118,7 @@ class DomainCorrelationSessionProcessor(PersistentSessionProcessor):
         self.garbage_collect_tables(context)
 
 class WhitelistedDomainCorrelationSessionProcessor(PersistentSessionProcessor):
+
     """Builds a table mapping address table IDs and IP addresses to whitelisted
     domain names, without their subdomains. This represents the set of valid DNS
     mappings to whitelisted domains for each device."""
@@ -219,7 +207,9 @@ class WhitelistedDomainCorrelationSessionProcessor(PersistentSessionProcessor):
         self.garbage_collect_tables(context)
 
 class FlowToDomainCorrelationSessionProcessor(PersistentSessionProcessor):
-    """Builds a map from flows to domains for that flow."""
+
+    """Builds a map from flow IDs to domains for that flow. Flow IDs are opaque
+    identifiers from updates."""
 
     def initialize_context(self, context):
         context.flow_to_domain_map = dict()
