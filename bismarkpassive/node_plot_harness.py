@@ -90,3 +90,47 @@ class PlotPerNodeHarness(Harness):
             plt.savefig(join(self.options.plots_directory,
                              directory,
                              '%s.%s' % (node_id, extension)))
+
+class PlotPerSessionHarness(Harness):
+    def plot(self, plotter, context, directory, sessions,
+                extension='png',
+                figsize=(11, 8.5),
+                limits=(None, None),
+                title=True,
+                availability=True,
+                timestamp=True,
+                autoformat=True,
+                tight_layout=True):
+        try:
+            makedirs(join(self.options.plots_directory, directory))
+        except OSError, e:
+            if e.errno != EEXIST:
+                raise
+        for (node_id, session_id) in sessions:
+            fig = plt.figure(1, figsize=figsize)
+            fig.clear()
+            left, right = limits
+            if left is not None:
+                plt.xlim(xmin=left)
+            if right is not None:
+                plt.xlim(xmax=right)
+            if title:
+                plt.title('%s at %s' % (node_id, session_id))
+            if availability:
+                for lower, upper in context.availability_intervals[node_id]:
+                    plt.axvspan(lower, upper, facecolor='0.9', linewidth=0.0)
+            plotter(context, node_id, session_id, limits)
+            if autoformat:
+                fig.autofmt_xdate(bottom=0)
+            if timestamp:
+                plt.text(1, 0, 'Generated %s' % datetime.now(),
+                         fontsize=8,
+                         color='gray',
+                         transform=fig.transFigure,
+                         verticalalignment='bottom',
+                         horizontalalignment='right')
+            if tight_layout:
+                plt.tight_layout()
+            plt.savefig(join(self.options.plots_directory,
+                             directory,
+                             '%s_%s.%s' % (node_id, session_id, extension)))
