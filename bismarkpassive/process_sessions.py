@@ -99,9 +99,8 @@ def process_session((session,
         persistent_context = PersistentContext(session)
         for processor in processors:
             processor.initialize_persistent_context(persistent_context)
-        pickle.dump(persistent_context,
-                    open(disk_pickle_path, 'wb'),
-                    pickle.HIGHEST_PROTOCOL)
+        with open(disk_pickle_path, 'wb') as handle:
+            pickle.dump(persistent_context, handle, pickle.HIGHEST_PROTOCOL)
     ephemeral_context = EphemeralContext(session)
     for processor in processors:
         processor.initialize_ephemeral_context(ephemeral_context)
@@ -127,20 +126,19 @@ def process_session((session,
     for processor in processors:
         processor.complete_session(persistent_context, ephemeral_context)
     if processed_new_update:
-        pickle.dump(persistent_context,
-                    open(disk_pickle_path, 'wb'),
-                    pickle.HIGHEST_PROTOCOL)
+        with open(disk_pickle_path, 'wb') as handle:
+            pickle.dump(persistent_context, handle, pickle.HIGHEST_PROTOCOL)
     if multiprocessed:
         ram_pickle_path = join(ram_pickle_root, pickle_filename)
         if processed_new_update:
-            pickle.dump((persistent_context, ephemeral_context),
-                        open(ram_pickle_path, 'wb'),
-                        pickle.HIGHEST_PROTOCOL)
+            with open(ram_pickle_path, 'wb') as handle:
+                pickle.dump((persistent_context, ephemeral_context),
+                            handle,
+                            pickle.HIGHEST_PROTOCOL)
             return (ram_pickle_path, ram_pickle_path)
         else:
-            pickle.dump(ephemeral_context,
-                        open(ram_pickle_path, 'wb'),
-                        pickle.HIGHEST_PROTOCOL)
+            with open(ram_pickle_path, 'wb') as handle:
+                pickle.dump(ephemeral_context, handle, pickle.HIGHEST_PROTOCOL)
             return (disk_pickle_path, ram_pickle_path)
     else:
         return (persistent_context, ephemeral_context)
@@ -250,9 +248,8 @@ def process_sessions(harness,
         processor.complete_global_context(global_context)
     if cached_global_context is not None:
         try:
-            pickle.dump(global_context,
-                        open(cached_global_context, 'wb'),
-                        pickle.HIGHEST_PROTOCOL)
+            with open(cached_global_context, 'wb') as handle:
+                pickle.dump(global_context, handle, pickle.HIGHEST_PROTOCOL)
             print 'Cached global context'
         except:
             print 'Failed to save cached global context'
