@@ -181,16 +181,19 @@ class PassiveUpdate(object):
 
         if 'drop_statistics' in sections:
             self.dropped_packets = {}
-            for line in sections['drop_statistics']:
+            for idx, line in enumerate(sections['drop_statistics']):
                 try:
                     size, count = line.split()
                 except ValueError:
                     if self.file_format_version <= 3:
-                        sections['http_urls'] = sections['drop_statistics']
+                        sections['http_urls'] = \
+                                sections['drop_statistics'][idx:]
                         break
+                    else:
+                        raise
                 self.dropped_packets[int(size)] = int(count)
 
-        if 'http_urls' in sections:
+        if 'http_urls' in sections and sections['http_urls'] != []:
             try:
                 self.dropped_http_urls = int(sections['http_urls'][0])
                 self.http_urls = []
