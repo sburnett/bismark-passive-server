@@ -62,7 +62,7 @@ class DomainCorrelationSessionProcessor(PersistentSessionProcessor):
         domain_key = (a_record.address_id, a_record.anonymized, a_record.domain)
         context._domain_to_a_record_map[domain_key].append(
                 (a_record, a_packet.timestamp))
-        ip_key = (a_record.address_id, a_record.anonymized, a_record.ip_address)
+        ip_key = (a_record.address_id, a_record.ip_address)
         domain_record = (a_record.anonymized,
                          a_record.domain,
                          a_packet.timestamp,
@@ -88,14 +88,13 @@ class DomainCorrelationSessionProcessor(PersistentSessionProcessor):
             if start_timestamp > end_timestamp:
                 continue
             ip_key = (a_record.address_id,
-                      a_record.anonymized,
                       a_record.ip_address)
             domain_record = (cname_record.domain_anonymized,
                              cname_record.domain,
                              start_timestamp,
                              end_timestamp)
             context.ip_to_domain_map[ip_key].add(domain_record)
-    
+
     def garbage_collect_tables(self, context):
         for key in context.ip_to_domain_map.keys():
             new_mappings = set(ifilter(
@@ -152,7 +151,7 @@ class WhitelistedDomainCorrelationSessionProcessor(PersistentSessionProcessor):
         if not a_record.anonymized:
             for domain, pattern in context.whitelist:
                 if pattern.search(a_record.domain) is not None:
-                    ip_key = (a_record.address_id, a_record.anonymized, a_record.ip_address)
+                    ip_key = (a_record.address_id, a_record.ip_address)
                     domain_record = (0,
                                      domain,
                                      a_packet.timestamp,
@@ -181,7 +180,7 @@ class WhitelistedDomainCorrelationSessionProcessor(PersistentSessionProcessor):
                             a_timestamp + a_record.ttl)
                     if start_timestamp > end_timestamp:
                         continue
-                    ip_key = (a_record.address_id, a_record.anonymized, a_record.ip_address)
+                    ip_key = (a_record.address_id, a_record.ip_address)
                     domain_record = (0, domain, start_timestamp, end_timestamp)
                     context.ip_to_domain_map[ip_key].add(domain_record)
 
@@ -230,17 +229,14 @@ class FlowToDomainCorrelationSessionProcessor(PersistentSessionProcessor):
 
             if flow.source_ip in context.ip_to_mac_address_index_map:
                 address_id = context.ip_to_mac_address_index_map[flow.source_ip]
-                ip_anonymized = flow.destination_ip_anonymized
                 ip_address = flow.destination_ip
             elif flow.destination_ip in context.ip_to_mac_address_index_map:
                 address_id = context.ip_to_mac_address_index_map[flow.destination_ip]
-                ip_anonymized = flow.source_ip_anonymized
                 ip_address = flow.source_ip
             else:
                 continue
             try:
-                domains = context.ip_to_domain_map[
-                        address_id, ip_anonymized, ip_address]
+                domains = context.ip_to_domain_map[address_id, ip_address]
                 first_timestamp = first_timestamps[flow.flow_id]
             except KeyError:
                 continue
