@@ -119,7 +119,8 @@ class PlotPerSessionHarness(Harness):
             if availability:
                 for lower, upper in context.availability_intervals[node_id]:
                     plt.axvspan(lower, upper, facecolor='0.9', linewidth=0.0)
-            plotter(context, node_id, session_id, limits)
+            if plotter(context, node_id, session_id, limits) is False:
+                continue
             if autoformat:
                 fig.autofmt_xdate(bottom=0)
             if timestamp:

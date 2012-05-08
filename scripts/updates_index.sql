@@ -23,3 +23,30 @@ CREATE TABLE updates
 );
 CREATE INDEX updates_index ON updates
 (node_id, anonymization_context, session_id, sequence_number);
+
+CREATE FUNCTION insert_new_update
+(text, text, bigint, integer, bytea, integer)
+RETURNS VOID AS
+$$
+INSERT INTO updates
+(node_id,
+ anonymization_context,
+ session_id,
+ sequence_number,
+ pickle,
+ size)
+VALUES ($1, $2, $3, $4, $5, $6);
+UPDATE sessions SET pickle_size = pickle_size + $6
+WHERE node_id = $1
+AND anonymization_context = $2
+AND session_id = $3;
+INSERT INTO sessions
+(node_id, anonymization_context, session_id, pickle_size)
+SELECT $1, $2, $3, $6
+WHERE NOT EXISTS
+(SELECT 1 FROM sessions
+ WHERE node_id = $1
+ AND anonymization_context = $2
+ AND session_id = $3);
+$$
+LANGUAGE sql;

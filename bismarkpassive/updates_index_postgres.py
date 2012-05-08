@@ -42,40 +42,42 @@ class UpdatesIndexer(UpdatesIndex):
 
     def index(self, tarnames, updates, reindex=False):
         cur = self._conn.cursor()
-        if reindex:
-            cur.execute('DROP INDEX IF EXISTS updates_index')
         cur.executemany('INSERT INTO tarnames (tarname) VALUES (%s)',
                         imap(lambda n: (basename(n),), tarnames))
         print 'Inserting new updates'
-        cur.executemany(
-                '''INSERT INTO updates
-                   (node_id,
-                    anonymization_context,
-                    session_id,
-                    sequence_number,
-                    pickle,
-                    size)
-                   VALUES (%s, %s, %s, %s, %s, %s)''',
-                imap(UpdatesIndexer.map_update, updates))
-        print 'Building index'
         if reindex:
+            cur.execute('DROP INDEX IF EXISTS updates_index')
+            cur.executemany(
+                    '''INSERT INTO updates
+                       (node_id,
+                        anonymization_context,
+                        session_id,
+                        sequence_number,
+                        pickle,
+                        size)
+                       VALUES (%s, %s, %s, %s, %s, %s)''',
+                    imap(UpdatesIndexer.map_update, updates))
+            print 'Building index'
             cur.execute('''CREATE INDEX
                            updates_index ON updates
                            (node_id,
                             anonymization_context,
                             session_id,
                             sequence_number)''')
-        print 'Computing sessions'
-        cur.execute('DELETE FROM sessions')
-        cur.execute(
-                '''INSERT INTO sessions
-                   (node_id, anonymization_context, session_id, pickle_size)
-                   SELECT node_id,
-                          anonymization_context,
-                          session_id,
-                          sum(size)
-                   FROM updates
-                   GROUP BY node_id, anonymization_context, session_id''')
+            print 'Computing sessions'
+            cur.execute('DELETE FROM sessions')
+            cur.execute(
+                    '''INSERT INTO sessions
+                       (node_id, anonymization_context, session_id, pickle_size)
+                       SELECT node_id,
+                              anonymization_context,
+                              session_id,
+                              sum(size)
+                       FROM updates
+                       GROUP BY node_id, anonymization_context, session_id''')
+        else:
+            cur.executemany('SELECT insert_new_update(%s, %s, %s, %s, %s, %s)',
+                            imap(UpdatesIndexer.map_update, updates))
         self._conn.commit()
 
 class UpdatesReader(UpdatesIndex):
