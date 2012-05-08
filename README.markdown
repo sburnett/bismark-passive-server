@@ -4,10 +4,10 @@ Bismark Passive Server-side Data Processing Documentation
 This repository contains infrastructure for processing data collected by
 routers running [bismark-passive](https://github.com/sburnett/bismark-passive).
 
-We've collected nearly 7 GB of compressed log files from 14 Bismark routers, and
-the amount of data and number of routers continues to grow every week. I've
-written a collection of Python modules that efficiently process the data. This
-system has two important properties:
+We've collected many gigabytes of compressed log files from several BISmark
+routers, and the amount of data and number of routers continues to grow every
+week. I've written a collection of Python modules that efficiently process the
+data. This system has two important properties:
 
 1. **Incremental.** Each processor module saves state about the data it's
    already seen, so providing a computation with additional data doesn't require
@@ -17,6 +17,11 @@ system has two important properties:
 
 Installation
 ------------
+
+First, clone this git repository from
+<git://github.com/sburnett/bismark-passive-server.git>. Be sure to run `git
+pull` periodically as I occasionally make important bug fixes and enhancements
+to the code.
 
 If you will store all your custom processing modules in the
 `bismark-passive-server` directory, then **you don't need to install anything**.
