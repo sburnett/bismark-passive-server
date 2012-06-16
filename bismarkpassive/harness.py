@@ -22,6 +22,8 @@ class Harness(object):
 
     def __init__(self, options):
         self._options = options
+        self._include_nodes = set()
+        self._exclude_nodes = set()
 
     @property
     def options(self):
@@ -43,14 +45,18 @@ class Harness(object):
         """Exclude this set of nodes from processing.
 
         Exclusion takes priority over inclusion."""
-        return set([])
+        if self.options.exclude_nodes and not self._exclude_nodes:
+            self._exclude_nodes = set(self.options.exclude_nodes.split(','))
+        return self._exclude_nodes
 
     @property
     def include_nodes(self):
         """Include only this set of nodes while processing.
 
         Exclusion takes priority over inclusion."""
-        return set([])
+        if self.options.include_nodes and not self._include_nodes:
+            self._include_nodes = set(self.options.include_nodes.split(','))
+        return self._include_nodes
 
     @staticmethod
     def setup_options(parser):
@@ -75,6 +81,12 @@ class Harness(object):
                           help='Rebuild database from scratch (advanced)')
         parser.add_option('--db_user', action='store', dest='db_user',
                           default='sburnett', help='Database username')
+        parser.add_option('--exclude_nodes', action='store',
+                          dest='exclude_nodes', default=None,
+                          help='Comma separated list of nodes to exclude')
+        parser.add_option('--include_nodes', action='store',
+                          dest='include_nodes', default=None,
+                          help='Comma separated list of nodes to process')
         parser.add_option('--plots_directory', action='store',
                           dest='plots_directory', default='/tmp',
                           help='Store plots in this directory')
