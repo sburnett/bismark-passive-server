@@ -15,7 +15,7 @@ class Harness(object):
     A harness does two things: First, it specifies a sequence of session
     processors to run on the bismark-passive data. Second, it does something
     useful with the results of those session processors.
-    
+
     """
 
     __metaclass__ = ABCMeta
@@ -26,7 +26,7 @@ class Harness(object):
     @property
     def options(self):
         """Return the command line options.
-        
+
         Please don't modify this object."""
         return self._options
 
@@ -41,7 +41,7 @@ class Harness(object):
     @property
     def exclude_nodes(self):
         """Exclude this set of nodes from processing.
-        
+
         Exclusion takes priority over inclusion."""
         return set([])
 
@@ -55,7 +55,7 @@ class Harness(object):
     @staticmethod
     def setup_options(parser):
         """Add command line arguments for the harness.
-        
+
         Keep arguments in alphabetical order. Don't use short options in this
         function. You can also add options in a subclass, but make sure to call
         this parent version first."""
