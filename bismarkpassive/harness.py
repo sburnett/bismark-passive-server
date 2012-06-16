@@ -40,6 +40,13 @@ class Harness(object):
         Session processors are always run the the order given."""
         return []
 
+    def should_process_session(self, session):
+        if self.exclude_nodes and session.node_id in self.exclude_nodes:
+            return False
+        if self.include_nodes and session.node_id not in self.include_nodes:
+            return False
+        return True
+
     @property
     def exclude_nodes(self):
         """Exclude this set of nodes from processing.

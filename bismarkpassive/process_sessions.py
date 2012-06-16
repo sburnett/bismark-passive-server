@@ -195,10 +195,7 @@ def process_sessions(harness,
     processors = harness.instantiate_processors()
     index = UpdatesReader(database_backend, database_name, **database_options)
     for session in index.sessions:
-        if harness.exclude_nodes and session.node_id in harness.exclude_nodes:
-            continue
-        if harness.include_nodes \
-                and session.node_id not in harness.include_nodes:
+        if not harness.should_process_session(session):
             continue
         process_args.append((session,
                              database_backend,
