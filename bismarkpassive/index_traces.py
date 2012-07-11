@@ -70,7 +70,7 @@ def index_traces(updates_directory,
                          progressbar.Timer()])
     else:
         vprogress = lambda x: x
-    tarnames = filter(verify_checksum, vprogress(tarnames_unprocessed))
+    tarnames = sorted(filter(verify_checksum, vprogress(tarnames_unprocessed)))
 
     number_of_tarfiles = len(tarnames)
     print 'Found %d new tar files' % number_of_tarfiles
