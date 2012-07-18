@@ -23,6 +23,10 @@ for node_dir in $UPLOADS_DIR/*; do
                 exit 1
             fi
             TEMPNAME=`mktemp /tmp/tmp-bismark-passive-upload.XXXXXXXXX`
+            if [ $? -ne 0 ]; then
+                echo "Cannot create temporary directory"
+                exit 1
+            fi
             tar cf $TEMPNAME ${UPDATE_FILES[*]} \
                 && mv $TEMPNAME $DESTNAME \
                 && chgrp bismark-passive $DESTNAME \
