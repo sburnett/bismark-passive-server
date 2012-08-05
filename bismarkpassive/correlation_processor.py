@@ -225,7 +225,7 @@ class FlowToDomainCorrelationSessionProcessor(PersistentSessionProcessor):
                 first_timestamps[packet.flow_id] = packet.timestamp
 
         for flow in update.flow_table:
-            context.flow_to_domain_map[flow.flow_id] = []
+            context.flow_to_domain_map[flow.flow_id] = set()
 
             if flow.source_ip in context.ip_to_mac_address_index_map:
                 address_id = context.ip_to_mac_address_index_map[flow.source_ip]
@@ -243,5 +243,5 @@ class FlowToDomainCorrelationSessionProcessor(PersistentSessionProcessor):
             for domain_anonymized, domain, start, end in domains:
                 if first_timestamp < start or end < first_timestamp:
                     continue
-                context.flow_to_domain_map[flow.flow_id].append(
+                context.flow_to_domain_map[flow.flow_id].add(
                         (domain_anonymized, domain))
